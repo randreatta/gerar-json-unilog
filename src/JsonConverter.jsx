@@ -23,6 +23,94 @@ const storage = {
   set: (key, value) => localStorage.setItem(key, value),
 };
 
+const FormField = ({ label, children, className }) => (
+  <div className={cn('space-y-1.5', className)}>
+    <Label className="text-sm font-medium text-gray-700">{label}</Label>
+    {children}
+  </div>
+);
+
+const SectionCard = ({ title, subtitle, colorClass = 'border-gray-200', children }) => (
+  <Card className={cn('border', colorClass)}>
+    {title && (
+      <CardHeader className="pb-4">
+        <CardTitle className="text-base font-semibold">{title}</CardTitle>
+        {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+      </CardHeader>
+    )}
+    <CardContent className={title ? '' : 'pt-6'}>{children}</CardContent>
+  </Card>
+);
+
+const EntityCard = ({ entity, onEdit, onDelete }) => (
+  <Card className="hover:shadow-md transition-shadow">
+    <CardContent className="pt-5">
+      <div className="flex justify-between items-start mb-3">
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-gray-800 truncate">{entity.name}</p>
+          <p className="text-xs text-gray-500 font-mono mt-0.5">{entity.cnpjCpf}</p>
+        </div>
+        <Badge variant={entity.personType === 'J' ? 'secondary' : 'outline'} className="ml-2 shrink-0">
+          {entity.personType === 'J' ? 'Jurídica' : 'Física'}
+        </Badge>
+      </div>
+      <div className="text-xs text-gray-500 space-y-0.5 mb-4">
+        {entity.address && <p>📍 {entity.address}{entity.number ? `, ${entity.number}` : ''}</p>}
+        {entity.city && <p>🏙️ {entity.city}{entity.state ? ` - ${entity.state}` : ''}</p>}
+        {entity.zipCode && <p>📮 {entity.zipCode}</p>}
+      </div>
+      <div className="flex gap-2">
+        <Button size="sm" variant="outline" onClick={onEdit} className="flex-1 gap-1.5">
+          <FileEdit className="w-3.5 h-3.5" />Editar
+        </Button>
+        <Button size="sm" variant="destructive" onClick={onDelete} className="flex-1 gap-1.5">
+          <Trash2 className="w-3.5 h-3.5" />Excluir
+        </Button>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const AddressFields = ({ data, setData }) => (
+  <>
+    <FormField label="CEP">
+      <Input value={data.zipCode||''} onChange={e => setData({...data, zipCode: e.target.value})} placeholder="00000-000" />
+    </FormField>
+    <FormField label="Endereço" className="md:col-span-2">
+      <Input value={data.address||''} onChange={e => setData({...data, address: e.target.value})} placeholder="Rua Exemplo" />
+    </FormField>
+    <FormField label="Número">
+      <Input value={data.number||''} onChange={e => setData({...data, number: e.target.value})} placeholder="S/N" />
+    </FormField>
+    <FormField label="Bairro">
+      <Input value={data.neighborhood||''} onChange={e => setData({...data, neighborhood: e.target.value})} placeholder="Centro" />
+    </FormField>
+    <FormField label="Complemento">
+      <Input value={data.complement||''} onChange={e => setData({...data, complement: e.target.value})} placeholder="N/A" />
+    </FormField>
+    <FormField label="Cidade">
+      <Input value={data.city||''} onChange={e => setData({...data, city: e.target.value})} placeholder="São Paulo" />
+    </FormField>
+    <FormField label="Estado">
+      <Input value={data.state||''} onChange={e => { const v = e.target.value.toUpperCase(); if (v.length<=2) setData({...data, state:v}); }} placeholder="SP" maxLength={2} />
+    </FormField>
+  </>
+);
+
+const SavedSelector = ({ saved, onSelect, colorClass }) => {
+  if (!Object.keys(saved).length) return null;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {Object.entries(saved).map(([cnpj, e]) => (
+        <button key={cnpj} onClick={() => onSelect(cnpj)}
+          className={cn('px-3 py-1.5 text-xs rounded-full border bg-white transition-colors hover:bg-gray-50 font-medium', colorClass)}>
+          {cnpj} — {e.name}
+        </button>
+      ))}
+    </div>
+  );
+};
+
 const navItems = [
   { id: 'creator',    label: 'Gerar JSON',       icon: LayoutDashboard },
   { id: 'converter',  label: 'Payload',           icon: Code2 },
@@ -386,96 +474,6 @@ export default function JsonConverter() {
 
   const loadSampleJson = () => setInputJson(JSON.stringify({ documentos:[{ agrupador:0, cnpjCpfEmpresa:'59769230000243', cnpjCpfTransportadora:'', codigoEstabelecimento:8, codigoDepositante:'59769230000243', tipoDocumento:'CINV', serieDocumento:'1', codigoEmpresa:'59769230000243', codigoTransportadora:'', descricaoNaturezaOperacao:'SEM VALOR FISCAL', dataEmissao:'2025-10-23 10:00:00', dataPrevisaoMovimento:'2025-10-23 10:00:00', valorTotalDocumento:0, valorTotalProduto:0, valorBaseIcmsSub:0, valorDesconto:0, valorFrete:0, valorIcmsSub:0, valorSeguro:0, quantidadeVolume:0, numeroDocumento:'2932', naturezaOperacao:'0000', informacaoAdicional:'SOLICITACAO DE ENTRADA VIA BITRIX, CHAMADO: 2937.', detalhes:[{ codigoEmpresa:'35705066000242', codigoProduto:'7898970092551', quantidadeMovimento:12, tipoUc:'UN', fatorTipoUc:'1', classeProduto:'00', valorUnitario:1.0, tipoLogistico:'1', dadoLogistico:'' },{ codigoEmpresa:'35705066000242', codigoProduto:'7898749570631', quantidadeMovimento:24, tipoUc:'UN', fatorTipoUc:'1', classeProduto:'00', valorUnitario:1.0, tipoLogistico:'1', dadoLogistico:'' }] }] }, null, 2));
 
-  // ── Reusable form field helpers ───────────────────────────────
-  const FormField = ({ label, children, className }) => (
-    <div className={cn('space-y-1.5', className)}>
-      <Label className="text-sm font-medium text-gray-700">{label}</Label>
-      {children}
-    </div>
-  );
-
-  const SectionCard = ({ title, subtitle, colorClass = 'border-gray-200', children }) => (
-    <Card className={cn('border', colorClass)}>
-      {title && (
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base font-semibold">{title}</CardTitle>
-          {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
-        </CardHeader>
-      )}
-      <CardContent className={title ? '' : 'pt-6'}>{children}</CardContent>
-    </Card>
-  );
-
-  const EntityCard = ({ entity, type, onEdit, onDelete }) => (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="pt-5">
-        <div className="flex justify-between items-start mb-3">
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-gray-800 truncate">{entity.name}</p>
-            <p className="text-xs text-gray-500 font-mono mt-0.5">{entity.cnpjCpf}</p>
-          </div>
-          <Badge variant={entity.personType === 'J' ? 'secondary' : 'outline'} className="ml-2 shrink-0">
-            {entity.personType === 'J' ? 'Jurídica' : 'Física'}
-          </Badge>
-        </div>
-        <div className="text-xs text-gray-500 space-y-0.5 mb-4">
-          {entity.address && <p>📍 {entity.address}{entity.number ? `, ${entity.number}` : ''}</p>}
-          {entity.city && <p>🏙️ {entity.city}{entity.state ? ` - ${entity.state}` : ''}</p>}
-          {entity.zipCode && <p>📮 {entity.zipCode}</p>}
-        </div>
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={onEdit} className="flex-1 gap-1.5">
-            <FileEdit className="w-3.5 h-3.5" />Editar
-          </Button>
-          <Button size="sm" variant="destructive" onClick={onDelete} className="flex-1 gap-1.5">
-            <Trash2 className="w-3.5 h-3.5" />Excluir
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
-  // ── Address fields block ──────────────────────────────────────
-  const AddressFields = ({ data, setData, colorPrefix }) => (
-    <>
-      <FormField label="CEP">
-        <Input value={data.zipCode||''} onChange={e => setData({...data, zipCode: e.target.value})} placeholder="00000-000" />
-      </FormField>
-      <FormField label="Endereço" className="md:col-span-2">
-        <Input value={data.address||''} onChange={e => setData({...data, address: e.target.value})} placeholder="Rua Exemplo" />
-      </FormField>
-      <FormField label="Número">
-        <Input value={data.number||''} onChange={e => setData({...data, number: e.target.value})} placeholder="S/N" />
-      </FormField>
-      <FormField label="Bairro">
-        <Input value={data.neighborhood||''} onChange={e => setData({...data, neighborhood: e.target.value})} placeholder="Centro" />
-      </FormField>
-      <FormField label="Complemento">
-        <Input value={data.complement||''} onChange={e => setData({...data, complement: e.target.value})} placeholder="N/A" />
-      </FormField>
-      <FormField label="Cidade">
-        <Input value={data.city||''} onChange={e => setData({...data, city: e.target.value})} placeholder="São Paulo" />
-      </FormField>
-      <FormField label="Estado">
-        <Input value={data.state||''} onChange={e => { const v = e.target.value.toUpperCase(); if (v.length<=2) setData({...data, state:v}); }} placeholder="SP" maxLength={2} />
-      </FormField>
-    </>
-  );
-
-  // ── Saved entity selector ─────────────────────────────────────
-  const SavedSelector = ({ saved, onSelect, colorClass }) => {
-    if (!Object.keys(saved).length) return null;
-    return (
-      <div className="flex flex-wrap gap-2">
-        {Object.entries(saved).map(([cnpj, e]) => (
-          <button key={cnpj} onClick={() => onSelect(cnpj)}
-            className={cn('px-3 py-1.5 text-xs rounded-full border bg-white transition-colors hover:bg-gray-50 font-medium', colorClass)}>
-            {cnpj} — {e.name}
-          </button>
-        ))}
-      </div>
-    );
-  };
 
   // ════════════════════════════════════════════════════════════════
   // RENDER
