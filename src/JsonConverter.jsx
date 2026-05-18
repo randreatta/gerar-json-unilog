@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   ArrowRight, Copy, Check, ChevronDown, ChevronUp,
   Plus, Trash2, FileEdit, Upload, HelpCircle, X,
-  Building2, Truck, Code2, LayoutDashboard
+  Building2, Truck, Code2, LayoutDashboard, Warehouse, ChevronRight
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Toaster, toast } from 'sonner';
@@ -24,10 +24,11 @@ const storage = {
 };
 
 const navItems = [
-  { id: 'creator',   label: 'Gerar JSON',       icon: LayoutDashboard },
-  { id: 'converter', label: 'Payload',           icon: Code2 },
-  { id: 'suppliers', label: 'Fornecedores',      icon: Building2 },
-  { id: 'carriers',  label: 'Transportadoras',   icon: Truck },
+  { id: 'creator',    label: 'Gerar JSON',       icon: LayoutDashboard },
+  { id: 'converter',  label: 'Payload',           icon: Code2 },
+  { id: 'depositors', label: 'Depositantes',      icon: Warehouse },
+  { id: 'suppliers',  label: 'Fornecedores',      icon: Building2 },
+  { id: 'carriers',   label: 'Transportadoras',   icon: Truck },
 ];
 
 export default function JsonConverter() {
@@ -46,15 +47,20 @@ export default function JsonConverter() {
   const [showExcelHelp,     setShowExcelHelp]     = useState(false);
 
   // ── Saved entities ────────────────────────────────────────────
-  const [savedSuppliers, setSavedSuppliers] = useState({});
-  const [savedCarriers,  setSavedCarriers]  = useState({});
-  const [editingSupplier,setEditingSupplier]= useState(null);
-  const [editingCarrier, setEditingCarrier] = useState(null);
+  const [savedSuppliers,  setSavedSuppliers]  = useState({});
+  const [savedCarriers,   setSavedCarriers]   = useState({});
+  const [savedDepositors, setSavedDepositors] = useState({});
+  const [editingSupplier, setEditingSupplier] = useState(null);
+  const [editingCarrier,  setEditingCarrier]  = useState(null);
+  const [editingDepositor,setEditingDepositor]= useState(null);
+  const [selectedDepositor, setSelectedDepositor] = useState(null);
 
-  const emptySupplier = { cnpjCpf:'', name:'', personType:'J', zipCode:'', address:'', number:'', neighborhood:'', complement:'', city:'', state:'' };
-  const emptyCarrier  = { cnpjCpf:'', name:'', personType:'J', zipCode:'', address:'', number:'', neighborhood:'', complement:'', city:'', state:'', description:'' };
-  const [newSupplier, setNewSupplier] = useState({ ...emptySupplier });
-  const [newCarrier,  setNewCarrier]  = useState({ ...emptyCarrier });
+  const emptySupplier  = { cnpjCpf:'', name:'', personType:'J', zipCode:'', address:'', number:'', neighborhood:'', complement:'', city:'', state:'' };
+  const emptyCarrier   = { cnpjCpf:'', name:'', personType:'J', zipCode:'', address:'', number:'', neighborhood:'', complement:'', city:'', state:'', description:'' };
+  const emptyDepositor = { cnpjCpf:'', name:'', personType:'J', zipCode:'', address:'', number:'', neighborhood:'', city:'', state:'' };
+  const [newSupplier,  setNewSupplier]  = useState({ ...emptySupplier });
+  const [newCarrier,   setNewCarrier]   = useState({ ...emptyCarrier });
+  const [newDepositor, setNewDepositor] = useState({ ...emptyDepositor });
 
   // ── Form state ────────────────────────────────────────────────
   const [formData, setFormData] = useState({
@@ -77,8 +83,9 @@ export default function JsonConverter() {
 
   // ── Load from storage ─────────────────────────────────────────
   React.useEffect(() => {
-    try { const r = storage.get('suppliers-data'); if (r) setSavedSuppliers(JSON.parse(r.value)); } catch {}
-    try { const r = storage.get('carriers-data');  if (r) setSavedCarriers(JSON.parse(r.value));  } catch {}
+    try { const r = storage.get('suppliers-data');  if (r) setSavedSuppliers(JSON.parse(r.value));  } catch {}
+    try { const r = storage.get('carriers-data');   if (r) setSavedCarriers(JSON.parse(r.value));   } catch {}
+    try { const r = storage.get('depositors-data'); if (r) setSavedDepositors(JSON.parse(r.value)); } catch {}
   }, []);
 
   // ── Helpers ───────────────────────────────────────────────────
@@ -153,6 +160,93 @@ export default function JsonConverter() {
     notify(editingCarrier ? 'Transportadora atualizada!' : 'Transportadora cadastrada!');
   };
   const startEditCarrier = (cnpjCpf) => { setEditingCarrier({ ...savedCarriers[cnpjCpf] }); setActiveTab('carriers'); };
+
+  // ── Depositors ────────────────────────────────────────────────
+  const deleteDepositor = (cnpjCpf) => {
+    if (!window.confirm(`Excluir depositante ${cnpjCpf}?`)) return;
+    const updated = { ...savedDepositors }; delete updated[cnpjCpf];
+    storage.set('depositors-data', JSON.stringify(updated)); setSavedDepositors(updated);
+    if (selectedDepositor?.cnpjCpf === cnpjCpf) setSelectedDepositor(null);
+    notify('Depositante excluído!');
+  };
+  const saveDepositorFromForm = () => {
+    const d = editingDepositor || newDepositor;
+    if (!d.cnpjCpf || (d.cnpjCpf.length !== 11 && d.cnpjCpf.length !== 14)) { toast.error('CNPJ/CPF deve ter 11 ou 14 dígitos!'); return; }
+    if (!d.name) { toast.error('Nome obrigatório!'); return; }
+    const updated = { ...savedDepositors, [d.cnpjCpf]: { ...d, lastUpdated: new Date().toISOString() } };
+    storage.set('depositors-data', JSON.stringify(updated)); setSavedDepositors(updated);
+    setNewDepositor({ ...emptyDepositor }); setEditingDepositor(null);
+    notify(editingDepositor ? 'Depositante atualizado!' : 'Depositante cadastrado!');
+  };
+  const startEditDepositor = (cnpjCpf) => { setEditingDepositor({ ...savedDepositors[cnpjCpf] }); setActiveTab('depositors'); };
+  const selectDepositor = (cnpjCpf) => {
+    const d = savedDepositors[cnpjCpf];
+    setSelectedDepositor(d);
+    setFormData(prev => ({ ...prev, cnpjCpfEmpresa: d.cnpjCpf }));
+    notify(`Depositante "${d.name}" selecionado!`);
+    setActiveTab('creator');
+  };
+
+  const handleDepositorsFileUpload = (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = new Uint8Array(event.target.result);
+        let workbook;
+        if (file.name.toLowerCase().endsWith('.csv')) {
+          workbook = XLSX.read(new TextDecoder('windows-1252').decode(data), { type: 'string', raw: true });
+        } else { workbook = XLSX.read(data, { type: 'array' }); }
+        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+        if (!jsonData.length) { toast.error('Planilha vazia!'); return; }
+
+        const cols = Object.keys(jsonData[0]);
+        const find = (names) => cols.find(c =>
+          names.some(n => c.trim().toLowerCase().replace(/\s+/g,'') === n.toLowerCase().replace(/\s+/g,''))
+        );
+
+        // Mapeamento baseado nos cabeçalhos reais da planilha do usuário
+        const colCNPJ  = find(['Empresa','CNPJ','CPF']);
+        const colNome  = find(['Descrição Empresa','DescriçãoEmpresa','DescricaoEmpresa','Nome','Razão Social','RazaoSocial']);
+        const colEnd   = find(['Endereço','Endereco','End']);
+        const colNum   = find(['Número','Numero','Nro','N']);
+        const colBairro= find(['Bairro']);
+        const colCEP   = find(['CEP']);
+        const colMun   = find(['Município','Municipio','Cidade']);
+        const colUF    = find(['UF','Estado']);
+        const colTipo  = find(['Tipo Pessoa Empresa','TipoPessoaEmpresa','Tipo Pessoa','TipoPessoa','Tipo']);
+
+        if (!colCNPJ) { toast.error(`Coluna "Empresa" (CNPJ) não encontrada!\nColunas detectadas: ${cols.join(', ')}`); return; }
+        if (!colNome) { toast.error(`Coluna "Descrição Empresa" não encontrada!\nColunas detectadas: ${cols.join(', ')}`); return; }
+
+        let ok = 0, fail = 0;
+        const newDepositors = { ...savedDepositors };
+        jsonData.forEach((row) => {
+          const cnpjCpf = String(row[colCNPJ] || '').replace(/\D/g,'');
+          if (!cnpjCpf || (cnpjCpf.length !== 11 && cnpjCpf.length !== 14) || !row[colNome]) { fail++; return; }
+          newDepositors[cnpjCpf] = {
+            cnpjCpf,
+            name:         String(row[colNome]   || '').toUpperCase(),
+            address:      String(row[colEnd]    || '').toUpperCase(),
+            number:       String(row[colNum]    || 'S/N'),
+            neighborhood: String(row[colBairro] || '').toUpperCase(),
+            zipCode:      String(row[colCEP]    || '').replace(/\D/g,''),
+            city:         String(row[colMun]    || '').toUpperCase(),
+            state:        String(row[colUF]     || '').toUpperCase(),
+            personType:   colTipo && String(row[colTipo]||'').toUpperCase().includes('F') ? 'F' : 'J',
+            lastUpdated:  new Date().toISOString(),
+          };
+          ok++;
+        });
+
+        storage.set('depositors-data', JSON.stringify(newDepositors));
+        setSavedDepositors(newDepositors);
+        e.target.value = '';
+        toast.success(`${ok} depositantes importados${fail ? ` (${fail} inválidos)` : ''}!`);
+      } catch (err) { toast.error(`Erro ao processar planilha: ${err.message}`); }
+    };
+    reader.readAsArrayBuffer(file);
+  };
 
   // ── Suppliers bulk import ─────────────────────────────────────
   const handleSuppliersFileUpload = (e) => {
@@ -417,6 +511,40 @@ export default function JsonConverter() {
           {/* ═══════════ GERAR JSON ═══════════ */}
           {activeTab === 'creator' && (
             <div className="max-w-4xl mx-auto space-y-6">
+              {/* Seletor rápido de depositante */}
+              {Object.keys(savedDepositors).length > 0 && (
+                <Card className="border-2 border-primary/20 bg-accent/30">
+                  <CardContent className="pt-4 pb-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Warehouse className="w-5 h-5 text-primary shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-800">Depositante</p>
+                          {selectedDepositor ? (
+                            <p className="text-sm text-primary font-medium truncate">
+                              {selectedDepositor.name} <span className="text-muted-foreground font-normal">— {selectedDepositor.cnpjCpf}</span>
+                            </p>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">Nenhum selecionado</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {selectedDepositor && (
+                          <Button size="sm" variant="ghost" onClick={() => { setSelectedDepositor(null); setFormData(p => ({...p, cnpjCpfEmpresa:''})); }} className="text-muted-foreground h-8 w-8 p-0">
+                            <X className="w-4 h-4" />
+                          </Button>
+                        )}
+                        <Button size="sm" variant="outline" onClick={() => setActiveTab('depositors')} className="gap-1.5">
+                          {selectedDepositor ? 'Trocar' : 'Selecionar'}
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               <SectionCard>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   {/* Tipo de Movimentação */}
@@ -908,6 +1036,156 @@ export default function JsonConverter() {
                       <EntityCard key={cnpj} entity={s} type="supplier"
                         onEdit={() => startEditSupplier(cnpj)}
                         onDelete={() => deleteSupplier(cnpj)} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ═══════════ DEPOSITANTES ═══════════ */}
+          {activeTab === 'depositors' && (
+            <div className="max-w-5xl mx-auto space-y-6">
+
+              {/* Importação em massa */}
+              {!editingDepositor && (
+                <Card className="border border-primary/30">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-base">Importação em Massa</CardTitle>
+                        <p className="text-sm text-muted-foreground mt-0.5">Importe sua planilha de depositantes de uma vez</p>
+                      </div>
+                      <Button asChild variant="outline" size="sm" className="gap-1.5">
+                        <label className="cursor-pointer flex items-center gap-2">
+                          <Upload className="w-4 h-4" />Selecionar Arquivo
+                          <input type="file" accept=".xlsx,.xls,.csv" onChange={handleDepositorsFileUpload} className="hidden" />
+                        </label>
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="bg-accent/50 rounded-md p-3 text-xs text-accent-foreground space-y-1">
+                      <p className="font-semibold mb-1">Colunas esperadas na planilha (linha 1):</p>
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
+                        <p><span className="font-mono bg-white px-1.5 py-0.5 rounded border text-xs">Empresa</span> → CNPJ/CPF <span className="text-destructive">*</span></p>
+                        <p><span className="font-mono bg-white px-1.5 py-0.5 rounded border text-xs">Descrição Empresa</span> → Nome <span className="text-destructive">*</span></p>
+                        <p><span className="font-mono bg-white px-1.5 py-0.5 rounded border text-xs">Endereço</span> → Endereço</p>
+                        <p><span className="font-mono bg-white px-1.5 py-0.5 rounded border text-xs">Número</span> → Número</p>
+                        <p><span className="font-mono bg-white px-1.5 py-0.5 rounded border text-xs">Bairro</span> → Bairro</p>
+                        <p><span className="font-mono bg-white px-1.5 py-0.5 rounded border text-xs">CEP</span> → CEP</p>
+                        <p><span className="font-mono bg-white px-1.5 py-0.5 rounded border text-xs">Município</span> → Cidade</p>
+                        <p><span className="font-mono bg-white px-1.5 py-0.5 rounded border text-xs">UF</span> → Estado</p>
+                        <p><span className="font-mono bg-white px-1.5 py-0.5 rounded border text-xs">Tipo Pessoa Empresa</span> → Tipo (J/F)</p>
+                      </div>
+                      <p className="mt-2 text-muted-foreground">Formatos aceitos: .XLS · .XLSX · .CSV</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Cadastro individual */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">{editingDepositor ? 'Editar Depositante' : 'Cadastrar Depositante'}</CardTitle>
+                  <p className="text-sm text-muted-foreground">Cadastro individual</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField label="CNPJ/CPF *" className="md:col-span-2">
+                      <Input
+                        value={editingDepositor ? editingDepositor.cnpjCpf : newDepositor.cnpjCpf}
+                        onChange={e => { const v=e.target.value.replace(/\D/g,''); if(v.length<=14) { editingDepositor ? setEditingDepositor({...editingDepositor,cnpjCpf:v}) : setNewDepositor({...newDepositor,cnpjCpf:v}); } }}
+                        disabled={!!editingDepositor}
+                        placeholder="00000000000000" />
+                      <p className="text-xs text-muted-foreground mt-1">11 dígitos (CPF) ou 14 dígitos (CNPJ)</p>
+                    </FormField>
+                    <FormField label="Nome / Razão Social *" className="md:col-span-2">
+                      <Input
+                        value={editingDepositor ? editingDepositor.name : newDepositor.name}
+                        onChange={e => editingDepositor ? setEditingDepositor({...editingDepositor,name:e.target.value}) : setNewDepositor({...newDepositor,name:e.target.value})}
+                        placeholder="Nome do depositante" />
+                    </FormField>
+                    <FormField label="Tipo Pessoa">
+                      <Select
+                        value={editingDepositor ? editingDepositor.personType : newDepositor.personType}
+                        onValueChange={v => editingDepositor ? setEditingDepositor({...editingDepositor,personType:v}) : setNewDepositor({...newDepositor,personType:v})}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectItem value="J">Jurídica</SelectItem><SelectItem value="F">Física</SelectItem></SelectContent>
+                      </Select>
+                    </FormField>
+                    {['zipCode','address','number','neighborhood','city','state'].map(field => {
+                      const labels = { zipCode:'CEP', address:'Endereço', number:'Número', neighborhood:'Bairro', city:'Cidade', state:'Estado' };
+                      const placeholders = { zipCode:'00000-000', address:'Rua Exemplo', number:'S/N', neighborhood:'Centro', city:'São Paulo', state:'SP' };
+                      const val = editingDepositor ? (editingDepositor[field]||'') : (newDepositor[field]||'');
+                      const onChange = e => {
+                        let v = e.target.value;
+                        if (field==='state') { v = v.toUpperCase(); if (v.length>2) return; }
+                        editingDepositor ? setEditingDepositor({...editingDepositor,[field]:v}) : setNewDepositor({...newDepositor,[field]:v});
+                      };
+                      return (
+                        <FormField key={field} label={labels[field]} className={field==='address' ? 'md:col-span-2' : ''}>
+                          <Input value={val} onChange={onChange} placeholder={placeholders[field]} maxLength={field==='state'?2:undefined} />
+                        </FormField>
+                      );
+                    })}
+                  </div>
+                  <div className="flex gap-3 mt-6">
+                    <Button onClick={saveDepositorFromForm} className="gap-1.5">
+                      <Check className="w-4 h-4" />{editingDepositor ? 'Atualizar' : 'Cadastrar'}
+                    </Button>
+                    {editingDepositor && (
+                      <Button variant="outline" onClick={() => { setEditingDepositor(null); setNewDepositor({...emptyDepositor}); }} className="gap-1.5">
+                        <X className="w-4 h-4" />Cancelar
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Lista */}
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-4 uppercase tracking-wide">
+                  Depositantes Cadastrados ({Object.keys(savedDepositors).length})
+                </h3>
+                {!Object.keys(savedDepositors).length ? (
+                  <div className="text-center py-16 bg-white rounded-lg border-2 border-dashed border-border">
+                    <Warehouse className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+                    <p className="text-muted-foreground">Nenhum depositante cadastrado ainda</p>
+                    <p className="text-sm text-muted-foreground/60 mt-1">Importe sua planilha ou cadastre individualmente</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {Object.entries(savedDepositors).map(([cnpj, d]) => (
+                      <Card key={cnpj} className={cn('hover:shadow-md transition-all cursor-pointer', selectedDepositor?.cnpjCpf === cnpj && 'ring-2 ring-primary border-primary')}>
+                        <CardContent className="pt-5">
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-gray-800 truncate">{d.name}</p>
+                              <p className="text-xs text-gray-500 font-mono mt-0.5">{cnpj}</p>
+                            </div>
+                            <Badge variant={d.personType==='J' ? 'secondary' : 'outline'} className="ml-2 shrink-0">
+                              {d.personType==='J' ? 'Jurídica' : 'Física'}
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-gray-500 space-y-0.5 mb-4">
+                            {d.city && <p>🏙️ {d.city}{d.state ? ` - ${d.state}` : ''}</p>}
+                            {d.address && <p>📍 {d.address}{d.number ? `, ${d.number}` : ''}</p>}
+                          </div>
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={() => selectDepositor(cnpj)}
+                              className={cn('flex-1 gap-1.5', selectedDepositor?.cnpjCpf===cnpj ? 'bg-green-600 hover:bg-green-700' : '')}>
+                              {selectedDepositor?.cnpjCpf===cnpj ? <><Check className="w-3.5 h-3.5"/>Selecionado</> : <><ChevronRight className="w-3.5 h-3.5"/>Usar</>}
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => startEditDepositor(cnpj)} className="w-9 p-0">
+                              <FileEdit className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button size="sm" variant="destructive" onClick={() => deleteDepositor(cnpj)} className="w-9 p-0">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
                     ))}
                   </div>
                 )}
