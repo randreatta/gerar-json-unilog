@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   ArrowRight, Copy, Check, ChevronDown, ChevronUp,
   Plus, Trash2, FileEdit, Upload, HelpCircle, X,
-  Building2, Truck, Code2, LayoutDashboard, Warehouse, ChevronRight
+  Building2, Truck, Code2, LayoutDashboard, Warehouse
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Toaster, toast } from 'sonner';
@@ -53,7 +53,6 @@ export default function JsonConverter() {
   const [editingSupplier, setEditingSupplier] = useState(null);
   const [editingCarrier,  setEditingCarrier]  = useState(null);
   const [editingDepositor,setEditingDepositor]= useState(null);
-  const [selectedDepositor, setSelectedDepositor] = useState(null);
 
   const emptySupplier  = { cnpjCpf:'', name:'', personType:'J', zipCode:'', address:'', number:'', neighborhood:'', complement:'', city:'', state:'' };
   const emptyCarrier   = { cnpjCpf:'', name:'', personType:'J', zipCode:'', address:'', number:'', neighborhood:'', complement:'', city:'', state:'', description:'' };
@@ -166,7 +165,6 @@ export default function JsonConverter() {
     if (!window.confirm(`Excluir depositante ${cnpjCpf}?`)) return;
     const updated = { ...savedDepositors }; delete updated[cnpjCpf];
     storage.set('depositors-data', JSON.stringify(updated)); setSavedDepositors(updated);
-    if (selectedDepositor?.cnpjCpf === cnpjCpf) setSelectedDepositor(null);
     notify('Depositante excluído!');
   };
   const saveDepositorFromForm = () => {
@@ -179,13 +177,6 @@ export default function JsonConverter() {
     notify(editingDepositor ? 'Depositante atualizado!' : 'Depositante cadastrado!');
   };
   const startEditDepositor = (cnpjCpf) => { setEditingDepositor({ ...savedDepositors[cnpjCpf] }); setActiveTab('depositors'); };
-  const selectDepositor = (cnpjCpf) => {
-    const d = savedDepositors[cnpjCpf];
-    setSelectedDepositor(d);
-    setFormData(prev => ({ ...prev, cnpjCpfEmpresa: d.cnpjCpf }));
-    notify(`Depositante "${d.name}" selecionado!`);
-    setActiveTab('creator');
-  };
 
   const handleDepositorsFileUpload = (e) => {
     const file = e.target.files[0]; if (!file) return;
@@ -511,39 +502,7 @@ export default function JsonConverter() {
           {/* ═══════════ GERAR JSON ═══════════ */}
           {activeTab === 'creator' && (
             <div className="max-w-4xl mx-auto space-y-6">
-              {/* Seletor rápido de depositante */}
-              {Object.keys(savedDepositors).length > 0 && (
-                <Card className="border-2 border-primary/20 bg-accent/30">
-                  <CardContent className="pt-4 pb-4">
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <Warehouse className="w-5 h-5 text-primary shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-gray-800">Depositante</p>
-                          {selectedDepositor ? (
-                            <p className="text-sm text-primary font-medium truncate">
-                              {selectedDepositor.name} <span className="text-muted-foreground font-normal">— {selectedDepositor.cnpjCpf}</span>
-                            </p>
-                          ) : (
-                            <p className="text-sm text-muted-foreground">Nenhum selecionado</p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {selectedDepositor && (
-                          <Button size="sm" variant="ghost" onClick={() => { setSelectedDepositor(null); setFormData(p => ({...p, cnpjCpfEmpresa:''})); }} className="text-muted-foreground h-8 w-8 p-0">
-                            <X className="w-4 h-4" />
-                          </Button>
-                        )}
-                        <Button size="sm" variant="outline" onClick={() => setActiveTab('depositors')} className="gap-1.5">
-                          {selectedDepositor ? 'Trocar' : 'Selecionar'}
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+
 
               <SectionCard>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -1157,7 +1116,7 @@ export default function JsonConverter() {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {Object.entries(savedDepositors).map(([cnpj, d]) => (
-                      <Card key={cnpj} className={cn('hover:shadow-md transition-all cursor-pointer', selectedDepositor?.cnpjCpf === cnpj && 'ring-2 ring-primary border-primary')}>
+                      <Card key={cnpj} className="hover:shadow-md transition-all">
                         <CardContent className="pt-5">
                           <div className="flex justify-between items-start mb-3">
                             <div className="flex-1 min-w-0">
@@ -1173,10 +1132,6 @@ export default function JsonConverter() {
                             {d.address && <p>📍 {d.address}{d.number ? `, ${d.number}` : ''}</p>}
                           </div>
                           <div className="flex gap-2">
-                            <Button size="sm" onClick={() => selectDepositor(cnpj)}
-                              className={cn('flex-1 gap-1.5', selectedDepositor?.cnpjCpf===cnpj ? 'bg-green-600 hover:bg-green-700' : '')}>
-                              {selectedDepositor?.cnpjCpf===cnpj ? <><Check className="w-3.5 h-3.5"/>Selecionado</> : <><ChevronRight className="w-3.5 h-3.5"/>Usar</>}
-                            </Button>
                             <Button size="sm" variant="outline" onClick={() => startEditDepositor(cnpj)} className="w-9 p-0">
                               <FileEdit className="w-3.5 h-3.5" />
                             </Button>
