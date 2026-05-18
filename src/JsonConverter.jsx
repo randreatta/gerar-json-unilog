@@ -585,13 +585,13 @@ export default function JsonConverter() {
                 </div>
               </SectionCard>
 
-              {/* Fornecedor */}
+              {/* Depositante */}
               {formData.documentType === 'inbound' && (
                 <Card className="border border-blue-200">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <div>
-                        <CardTitle className="text-base text-blue-900">Dados do Fornecedor</CardTitle>
+                        <CardTitle className="text-base text-blue-900">Dados do Depositante</CardTitle>
                         <p className="text-sm text-blue-600 mt-0.5">Obrigatório para a API 2.0</p>
                       </div>
                       <Button variant="outline" size="sm" onClick={() => setShowSupplierFields(!showSupplierFields)} className="border-blue-300 text-blue-700 hover:bg-blue-50">
@@ -602,23 +602,21 @@ export default function JsonConverter() {
                   {showSupplierFields && (
                     <CardContent>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField label="CNPJ/CPF Fornecedor *" className="md:col-span-2">
-                          <div className="flex gap-2">
-                            <Input value={supplierData.cnpjCpf||''} onChange={e => { const v=e.target.value.replace(/\D/g,''); if(v.length<=14) setSupplierData({...supplierData,cnpjCpf:v}); }} onBlur={e => { const v=e.target.value; if(v.length===11||v.length===14) loadSupplierByCnpj(v); }} placeholder="Digite para carregar automaticamente" className="flex-1" />
-                            {(supplierData.cnpjCpf?.length===11||supplierData.cnpjCpf?.length===14) && (
-                              <Button size="sm" variant="outline" onClick={() => saveSupplier(supplierData.cnpjCpf, supplierData)} className="shrink-0">Salvar</Button>
-                            )}
-                          </div>
+                        <FormField label="CNPJ/CPF Depositante *" className="md:col-span-2">
+                          <Input value={supplierData.cnpjCpf||''} onChange={e => { const v=e.target.value.replace(/\D/g,''); if(v.length<=14) setSupplierData({...supplierData,cnpjCpf:v}); }} placeholder="00000000000000" />
                         </FormField>
-                        {Object.keys(savedSuppliers).length > 0 && (
+                        {Object.keys(savedDepositors).length > 0 && (
                           <div className="md:col-span-2">
-                            <Label className="text-xs text-muted-foreground mb-2 block">Fornecedores salvos:</Label>
-                            <SavedSelector saved={savedSuppliers} colorClass="border-blue-200 text-blue-700 hover:border-blue-400"
-                              onSelect={cnpj => { setSupplierData({...supplierData,cnpjCpf:cnpj}); loadSupplierByCnpj(cnpj); }} />
+                            <Label className="text-xs text-muted-foreground mb-2 block">Depositantes cadastrados:</Label>
+                            <SavedSelector saved={savedDepositors} colorClass="border-blue-200 text-blue-700 hover:border-blue-400"
+                              onSelect={cnpj => {
+                                const d = savedDepositors[cnpj];
+                                if (d) setSupplierData({ ...d });
+                              }} />
                           </div>
                         )}
                         <FormField label="Nome *" className="md:col-span-2">
-                          <Input value={supplierData.name||''} onChange={e => setSupplierData({...supplierData,name:e.target.value})} placeholder="Nome do fornecedor" />
+                          <Input value={supplierData.name||''} onChange={e => setSupplierData({...supplierData,name:e.target.value})} placeholder="Nome do depositante" />
                         </FormField>
                         <FormField label="Tipo Pessoa">
                           <Select value={supplierData.personType||'J'} onValueChange={v => setSupplierData({...supplierData,personType:v})}>
