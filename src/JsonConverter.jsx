@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
-import { FileJson, ArrowRight, Copy, Check, ChevronDown, ChevronUp, Plus, Trash2, FileEdit, Upload, HelpCircle, X } from 'lucide-react';
+import { ArrowRight, Copy, Check, ChevronDown, ChevronUp, Plus, Trash2, FileEdit, Upload, HelpCircle, X } from 'lucide-react';
+
+const UnilogIcon = ({ className }) => (
+  <img src="/unilog-logo.png" alt="Unilog" className={`object-contain ${className}`} />
+);
 import * as XLSX from 'xlsx';
 
 // localStorage helpers replacing window.storage
@@ -547,7 +551,7 @@ export default function JsonConverter() {
 
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-3">
-            <FileJson className="w-10 h-10 text-red-600" />
+            <UnilogIcon className="w-10 h-10" />
             Gerar JSON UNILOG
           </h1>
         </div>
@@ -557,7 +561,7 @@ export default function JsonConverter() {
           {[
             { id: 'creator', label: 'Gerar JSON', icon: <FileEdit className="w-5 h-5" /> },
             { id: 'converter', label: 'Payload', icon: <ArrowRight className="w-5 h-5" /> },
-            { id: 'suppliers', label: 'Fornecedores', icon: <FileJson className="w-5 h-5" /> },
+            { id: 'suppliers', label: 'Fornecedores', icon: <UnilogIcon className="w-5 h-5" /> },
             { id: 'carriers', label: 'Transportadoras', icon: <Trash2 className="w-5 h-5" /> },
           ].map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
@@ -995,7 +999,7 @@ export default function JsonConverter() {
                   {showExcelHelp && (
                     <div className="fixed left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 bg-white border-2 border-blue-300 rounded-lg shadow-2xl p-4 z-50"
                       onMouseEnter={() => setShowExcelHelp(true)} onMouseLeave={() => setShowExcelHelp(false)}>
-                      <h4 className="font-semibold text-blue-800 mb-2 flex items-center gap-2"><FileJson className="w-5 h-5" />Formato da Planilha Excel</h4>
+                      <h4 className="font-semibold text-blue-800 mb-2 flex items-center gap-2"><UnilogIcon className="w-5 h-5" />Formato da Planilha Excel</h4>
                       <p className="text-sm text-blue-700 mb-2">A planilha deve conter as seguintes colunas (A1 até H1):</p>
                       <div className="grid grid-cols-1 gap-1 text-xs font-mono bg-blue-50 p-3 rounded border border-blue-200">
                         {['codigoProduto','quantidadeMovimento','tipoUc','fatorTipoUc','classeProduto','valorUnitario','tipoLogistico','dadoLogistico'].map((col, i) => (
@@ -1011,7 +1015,7 @@ export default function JsonConverter() {
               {uploadedFileName && (
                 <div className="bg-green-50 border border-green-300 rounded-lg p-4 mt-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <FileJson className="w-6 h-6 text-green-600" />
+                    <UnilogIcon className="w-6 h-6" />
                     <div>
                       <p className="font-semibold text-green-800">Arquivo Carregado</p>
                       <p className="text-sm text-green-700">{uploadedFileName}</p>
@@ -1095,7 +1099,7 @@ export default function JsonConverter() {
             <div className="flex justify-center">
               <button onClick={generateJsonFromForm}
                 className="flex items-center gap-3 px-8 py-4 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-lg shadow-lg transition-all transform hover:scale-105">
-                <FileJson className="w-6 h-6" />Gerar JSON
+                <UnilogIcon className="w-6 h-6" />Gerar JSON
               </button>
             </div>
           </div>
@@ -1204,7 +1208,7 @@ export default function JsonConverter() {
               <h3 className="text-xl font-semibold text-gray-800 mb-4">Fornecedores Cadastrados ({Object.keys(savedSuppliers).length})</h3>
               {Object.keys(savedSuppliers).length === 0 ? (
                 <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                  <FileJson className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <UnilogIcon className="w-12 h-12 mx-auto mb-3 opacity-40" />
                   <p className="text-gray-600">Nenhum fornecedor cadastrado ainda</p>
                 </div>
               ) : (
