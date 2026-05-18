@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   ArrowRight, Copy, Check, ChevronDown, ChevronUp,
   Plus, Trash2, FileEdit, Upload, HelpCircle, X,
-  Building2, Truck, Code2, LayoutDashboard, Warehouse
+  Building2, Truck, Code2, LayoutDashboard, Warehouse, History, Clock
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Toaster, toast } from 'sonner';
@@ -26,6 +26,7 @@ const storage = {
 const navItems = [
   { id: 'creator',    label: 'Gerar JSON',       icon: LayoutDashboard },
   { id: 'converter',  label: 'Payload',           icon: Code2 },
+  { id: 'history',    label: 'Histórico',         icon: History },
   { id: 'depositors', label: 'Depositantes',      icon: Warehouse },
   { id: 'suppliers',  label: 'Fornecedores',      icon: Building2 },
   { id: 'carriers',   label: 'Transportadoras',   icon: Truck },
@@ -45,6 +46,10 @@ export default function JsonConverter() {
   const [uploadError,       setUploadError]       = useState('');
   const [uploadedFileName,  setUploadedFileName]  = useState('');
   const [showExcelHelp,     setShowExcelHelp]     = useState(false);
+
+  // ── History ───────────────────────────────────────────────────
+  const [jsonHistory, setJsonHistory] = useState([]);
+  const [expandedHistory, setExpandedHistory] = useState(null);
 
   // ── Saved entities ────────────────────────────────────────────
   const [savedSuppliers,  setSavedSuppliers]  = useState({});
@@ -85,6 +90,7 @@ export default function JsonConverter() {
     try { const r = storage.get('suppliers-data');  if (r) setSavedSuppliers(JSON.parse(r.value));  } catch {}
     try { const r = storage.get('carriers-data');   if (r) setSavedCarriers(JSON.parse(r.value));   } catch {}
     try { const r = storage.get('depositors-data'); if (r) setSavedDepositors(JSON.parse(r.value)); } catch {}
+    try { const r = storage.get('json-history');    if (r) setJsonHistory(JSON.parse(r.value));     } catch {}
   }, []);
 
   // ── Helpers ───────────────────────────────────────────────────
@@ -351,7 +357,30 @@ export default function JsonConverter() {
           return { ...base, ...common, items, supplier, ...(carrierIn && { carrier: carrierIn }) };
         }
       });
-      setOutputJson(JSON.stringify({ orders, packingList:null }, null, 2));
+      const result = { orders, packingList: null };
+      const resultStr = JSON.stringify(result, null, 2);
+      setOutputJson(resultStr);
+
+      // Salva no histórico
+      const firstDoc = input.documentos[0];
+      const entry = {
+        id: Date.now(),
+        timestamp: new Date().toISOString(),
+        orderNumber: firstDoc.numeroDocumento || '—',
+        orderType: firstDoc.tipoDocumento || '—',
+        documentType: formData.documentType,
+        cnpj: formData.documentType === 'outbound'
+          ? (customerData.cnpjCpf || firstDoc.cnpjCpfCliente || '—')
+          : (supplierData.cnpjCpf || firstDoc.cnpjCpfEmpresa || '—'),
+        entityName: formData.documentType === 'outbound'
+          ? (customerData.name || '—')
+          : (supplierData.name || '—'),
+        itemCount: orders.reduce((acc, o) => acc + (o.items?.length || 0), 0),
+        json: resultStr,
+      };
+      const updated = [entry, ...jsonHistory].slice(0, 100);
+      storage.set('json-history', JSON.stringify(updated));
+      setJsonHistory(updated);
     } catch (err) { setError(`Erro: ${err.message}`); setOutputJson(''); }
   };
 
@@ -999,6 +1028,96 @@ export default function JsonConverter() {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* ═══════════ HISTÓRICO ═══════════ */}
+          {activeTab === 'history' && (
+            <div className="max-w-5xl mx-auto space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-800">Histórico de JSONs Gerados</h2>
+                  <p className="text-sm text-muted-foreground">{jsonHistory.length} registro{jsonHistory.length !== 1 ? 's' : ''} salvos (últimos 100)</p>
+                </div>
+                {jsonHistory.length > 0 && (
+                  <Button variant="destructive" size="sm" onClick={() => {
+                    if (!window.confirm('Limpar todo o histórico?')) return;
+                    storage.set('json-history', JSON.stringify([]));
+                    setJsonHistory([]);
+                    setExpandedHistory(null);
+                    notify('Histórico limpo!');
+                  }} className="gap-1.5">
+                    <Trash2 className="w-4 h-4" />Limpar Tudo
+                  </Button>
+                )}
+              </div>
+
+              {jsonHistory.length === 0 ? (
+                <div className="text-center py-20 bg-white rounded-lg border-2 border-dashed border-border">
+                  <Clock className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+                  <p className="text-muted-foreground">Nenhum JSON gerado ainda</p>
+                  <p className="text-sm text-muted-foreground/60 mt-1">Os JSONs convertidos na aba Payload aparecerão aqui</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {jsonHistory.map(entry => {
+                    const date = new Date(entry.timestamp);
+                    const formatted = date.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' })
+                      + ' às ' + date.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+                    const isExpanded = expandedHistory === entry.id;
+                    return (
+                      <Card key={entry.id} className="overflow-hidden">
+                        <CardContent className="pt-4 pb-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-start gap-3 min-w-0">
+                              <div className={cn('mt-0.5 shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold', entry.documentType === 'outbound' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700')}>
+                                {entry.documentType === 'outbound' ? '↑' : '↓'}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-semibold text-gray-800">Doc {entry.orderNumber}</span>
+                                  <Badge variant="secondary" className="text-xs">{entry.orderType}</Badge>
+                                  <Badge variant="outline" className="text-xs">{entry.documentType === 'outbound' ? 'Saída' : 'Entrada'}</Badge>
+                                </div>
+                                <p className="text-sm text-muted-foreground mt-0.5 truncate">
+                                  {entry.entityName !== '—' ? entry.entityName : entry.cnpj}
+                                </p>
+                                <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                  <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatted}</span>
+                                  <span>{entry.itemCount} produto{entry.itemCount !== 1 ? 's' : ''}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <Button size="sm" variant="outline" onClick={() => copyToClipboard(entry.json)} className="gap-1.5">
+                                <Copy className="w-3.5 h-3.5" />Copiar
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => setExpandedHistory(isExpanded ? null : entry.id)} className="gap-1.5">
+                                {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => {
+                                if (!window.confirm('Remover este registro?')) return;
+                                const updated = jsonHistory.filter(h => h.id !== entry.id);
+                                storage.set('json-history', JSON.stringify(updated));
+                                setJsonHistory(updated);
+                                if (expandedHistory === entry.id) setExpandedHistory(null);
+                              }} className="text-muted-foreground hover:text-destructive w-8 h-8 p-0">
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                          {isExpanded && (
+                            <div className="mt-4 pt-4 border-t border-border">
+                              <textarea readOnly value={entry.json}
+                                className="w-full h-64 p-3 rounded-md border border-input bg-muted font-mono text-xs resize-none focus-visible:outline-none" />
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
