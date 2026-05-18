@@ -488,7 +488,7 @@ export default function JsonConverter() {
 
         {/* Header */}
         <header className="bg-white border-b border-border px-8 py-5 flex items-center gap-4 shrink-0">
-          <img src="/unilog-logo.png" alt="Unilog" className="h-10 w-auto object-contain" />
+          <img src={`${import.meta.env.BASE_URL}unilog-logo.png`} alt="Unilog" className="h-10 w-auto object-contain" />
           <Separator orientation="vertical" className="h-10" />
           <div>
             <h1 className="text-xl font-bold text-gray-900 leading-tight">Criação JSON</h1>
