@@ -111,6 +111,38 @@ const SavedSelector = ({ saved, onSelect, colorClass }) => {
   );
 };
 
+const DepositorSelector = ({ saved, onSelect }) => {
+  const [search, setSearch] = React.useState('');
+  if (!Object.keys(saved).length) return null;
+  const filtered = Object.entries(saved)
+    .sort(([, a], [, b]) => a.name.localeCompare(b.name, 'pt-BR'))
+    .filter(([cnpj, e]) => {
+      const q = search.toLowerCase();
+      return e.name.toLowerCase().includes(q) || cnpj.includes(q);
+    });
+  return (
+    <div className="space-y-2">
+      <Input
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        placeholder="Buscar depositante..."
+        className="h-8 text-sm"
+      />
+      <div className="max-h-48 overflow-y-auto rounded-md border border-blue-100 divide-y divide-blue-50">
+        {filtered.length === 0 ? (
+          <p className="text-xs text-muted-foreground text-center py-3">Nenhum depositante encontrado</p>
+        ) : filtered.map(([cnpj, e]) => (
+          <button key={cnpj} onClick={() => onSelect(cnpj)}
+            className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 transition-colors flex justify-between items-center gap-4">
+            <span className="font-medium text-gray-800 truncate">{e.name}</span>
+            <span className="text-xs text-gray-400 font-mono shrink-0">{cnpj}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const navItems = [
   { id: 'creator',    label: 'Gerar JSON',       icon: LayoutDashboard },
   { id: 'converter',  label: 'Payload',           icon: Code2 },
@@ -613,7 +645,7 @@ export default function JsonConverter() {
                         {Object.keys(savedDepositors).length > 0 && (
                           <div className="md:col-span-2">
                             <Label className="text-xs text-muted-foreground mb-2 block">Depositantes cadastrados:</Label>
-                            <SavedSelector saved={savedDepositors} colorClass="border-blue-200 text-blue-700 hover:border-blue-400"
+                            <DepositorSelector saved={savedDepositors}
                               onSelect={cnpj => {
                                 const d = savedDepositors[cnpj];
                                 if (d) setSupplierData({ ...d });
