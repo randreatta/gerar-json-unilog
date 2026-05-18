@@ -626,45 +626,28 @@ export default function JsonConverter() {
               {formData.documentType === 'inbound' && (
                 <Card className="border border-blue-200">
                   <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="text-base text-blue-900">Dados do Depositante</CardTitle>
-                        <p className="text-sm text-blue-600 mt-0.5">Obrigatório para a API 2.0</p>
-                      </div>
-                      <Button variant="outline" size="sm" onClick={() => setShowSupplierFields(!showSupplierFields)} className="border-blue-300 text-blue-700 hover:bg-blue-50">
-                        {showSupplierFields ? <><ChevronUp className="w-4 h-4 mr-1.5"/>Ocultar</> : <><ChevronDown className="w-4 h-4 mr-1.5"/>Preencher</>}
-                      </Button>
-                    </div>
+                    <CardTitle className="text-base text-blue-900">Dados do Depositante</CardTitle>
+                    <p className="text-sm text-blue-600 mt-0.5">Obrigatório para a API 2.0</p>
                   </CardHeader>
-                  {showSupplierFields && (
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField label="CNPJ/CPF Depositante *" className="md:col-span-2">
-                          <Input value={supplierData.cnpjCpf||''} onChange={e => { const v=e.target.value.replace(/\D/g,''); if(v.length<=14) setSupplierData({...supplierData,cnpjCpf:v}); }} placeholder="00000000000000" />
-                        </FormField>
-                        {Object.keys(savedDepositors).length > 0 && (
-                          <div className="md:col-span-2">
-                            <Label className="text-xs text-muted-foreground mb-2 block">Depositantes cadastrados:</Label>
-                            <DepositorSelector saved={savedDepositors}
-                              onSelect={cnpj => {
-                                const d = savedDepositors[cnpj];
-                                if (d) setSupplierData({ ...d });
-                              }} />
+                  <CardContent>
+                    {Object.keys(savedDepositors).length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Nenhum depositante cadastrado. Acesse a aba <strong>Depositantes</strong> para cadastrar.</p>
+                    ) : (
+                      <>
+                        {supplierData.cnpjCpf && (
+                          <div className="mb-3 px-3 py-2 rounded-md bg-blue-50 border border-blue-200 text-sm flex justify-between items-center">
+                            <span className="font-medium text-blue-900">{supplierData.name || supplierData.cnpjCpf}</span>
+                            <span className="text-xs text-blue-600 font-mono">{supplierData.cnpjCpf}</span>
                           </div>
                         )}
-                        <FormField label="Nome *" className="md:col-span-2">
-                          <Input value={supplierData.name||''} onChange={e => setSupplierData({...supplierData,name:e.target.value})} placeholder="Nome do depositante" />
-                        </FormField>
-                        <FormField label="Tipo Pessoa">
-                          <Select value={supplierData.personType||'J'} onValueChange={v => setSupplierData({...supplierData,personType:v})}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent><SelectItem value="J">Jurídica</SelectItem><SelectItem value="F">Física</SelectItem></SelectContent>
-                          </Select>
-                        </FormField>
-                        <AddressFields data={supplierData} setData={setSupplierData} />
-                      </div>
-                    </CardContent>
-                  )}
+                        <DepositorSelector saved={savedDepositors}
+                          onSelect={cnpj => {
+                            const d = savedDepositors[cnpj];
+                            if (d) setSupplierData({ ...d });
+                          }} />
+                      </>
+                    )}
+                  </CardContent>
                 </Card>
               )}
 
