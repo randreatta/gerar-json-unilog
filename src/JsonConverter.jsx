@@ -394,11 +394,50 @@ export default function JsonConverter() {
     reader.readAsArrayBuffer(file);
   };
 
+  // ── Shared conversion logic ───────────────────────────────────
+  const performConversion = (input) => {
+    if (!input.documentos?.length) throw new Error('Propriedade "documentos" não encontrada');
+    const isOutbound = formData.documentType === 'outbound';
+    const orders = input.documentos.map(doc => {
+      const now = new Date();
+      const bt = new Date(now.toLocaleString('en-US', { timeZone:'America/Sao_Paulo' }));
+      const currentDate = `${bt.getFullYear()}-${String(bt.getMonth()+1).padStart(2,'0')}-${String(bt.getDate()).padStart(2,'0')}T${String(bt.getHours()).padStart(2,'0')}:${String(bt.getMinutes()).padStart(2,'0')}:${String(bt.getSeconds()).padStart(2,'0')}-03:00`;
+      const uniqueProd = new Set((doc.detalhes||[]).map(i => i.codigoProduto).filter(Boolean));
+      const base = { wareHouseCode: doc.codigoEstabelecimento||0, expectedMovementDate: currentDate, orderNumber: doc.numeroDocumento||'', orderSeries: doc.serieDocumento||'01', orderType: doc.tipoDocumento||'NFE', nfeAccessKey:'00000000000000000000000000000000000000000000', issueDate: currentDate, additionValue:0, discountValue: doc.valorDesconto||0, freightValue: doc.valorFrete||0, insuranceValue: doc.valorSeguro||0, totalOrderValue: doc.valorTotalDocumento||0, totalProductValue: doc.valorTotalProduto||0, grossWeight:0, netWeight:0, volumeQuantity: uniqueProd.size||1 };
+      const common = { nfeAuthorizationDate:null, nfeProtocol:null, transportMode:null, volumeTrackingCode:null, additionalInfo1:null, additionalInfo2:null, additionalInfo3:null, cfop:null, shelfLifeRemainingPercent:null, costCenter:null };
+      const items = (doc.detalhes||[]).map(item => ({ productClass: item.classeProduto||'00', ean: item.codigoProduto||'', batchCode: item.dadoLogistico||null, purchaseUnitFactor: parseInt(item.fatorTipoUc)||1, purchaseUnitType: item.tipoUc||'UN', expirationDate:null, quantity: item.quantidadeMovimento||0, additionValue:0, discountValue:0, serviceValue:0, unitValue: parseFloat(item.valorUnitario)||0, fiscalUnitValue:0 }));
+      if (isOutbound) {
+        const customer = { cnpjCpf: customerData.cnpjCpf||doc.cnpjCpfCliente||'', name: customerData.name||'CLIENTE PADRAO', personType: customerData.personType||'J', neighborhood: customerData.neighborhood||'CENTRO', zipCode: customerData.zipCode||'00000-000', complement: customerData.complement||'N/A', description: customerData.description||doc.descricaoNaturezaOperacao||'', address: customerData.address||'RUA PADRAO', number: customerData.number||'S/N', city: customerData.city||'SAO PAULO', state: customerData.state||'SP' };
+        const carrier = carrierData.cnpjCpf ? { cnpjCpf: carrierData.cnpjCpf, name: carrierData.name||null, description: carrierData.description||null, personType: carrierData.personType||'J', neighborhood: carrierData.neighborhood||null, address: carrierData.address||null, number: carrierData.number||null, city: carrierData.city||null, zipCode: carrierData.zipCode||null, state: carrierData.state||null, complement: carrierData.complement||null } : { cnpjCpf:null, name:null, description:null, personType:null, neighborhood:null, address:null, number:null, city:null, zipCode:null, state:null, complement:null };
+        return { ...base, ...common, salesChannel:'B2B', items, project:{code:null,name:null}, customer, carrier, shippingLabel:{content:null,type:null}, shippingAddress:{cnpjCpf:null,name:null,description:null,personType:null,neighborhood:null,address:null,number:null,city:null,zipCode:null,state:null,complement:null} };
+      } else {
+        const supplier = { neighborhood: supplierData.neighborhood||'CENTRO', zipCode: supplierData.zipCode||'00000-000', cnpjCpf: supplierData.cnpjCpf||doc.cnpjCpfEmpresa||'', complement: supplierData.complement||'N/A', name: supplierData.name||'FORNECEDOR PADRAO', description: doc.descricaoNaturezaOperacao||'', address: supplierData.address||'RUA PADRAO', number: supplierData.number||'S/N', city: supplierData.city||'SAO PAULO', personType: supplierData.personType||'J', state: supplierData.state||'SP' };
+        const carrierIn = carrierData.cnpjCpf ? { neighborhood: carrierData.neighborhood||null, zipCode: carrierData.zipCode||null, cnpjCpf: carrierData.cnpjCpf, complement: carrierData.complement||null, name: carrierData.name||null, description: carrierData.description||null, address: carrierData.address||null, city: carrierData.city||null, number: carrierData.number||null, personType: carrierData.personType||'J', state: carrierData.state||null } : null;
+        return { ...base, ...common, items, supplier, ...(carrierIn && { carrier: carrierIn }) };
+      }
+    });
+    const result = { orders, packingList: null };
+    const resultStr = JSON.stringify(result, null, 2);
+    const firstDoc = input.documentos[0];
+    const entry = {
+      id: Date.now(),
+      timestamp: new Date().toISOString(),
+      orderNumber: firstDoc.numeroDocumento || '—',
+      orderType: firstDoc.tipoDocumento || '—',
+      documentType: formData.documentType,
+      cnpj: isOutbound ? (customerData.cnpjCpf || firstDoc.cnpjCpfCliente || '—') : (supplierData.cnpjCpf || firstDoc.cnpjCpfEmpresa || '—'),
+      entityName: isOutbound ? (customerData.name || '—') : (supplierData.name || '—'),
+      itemCount: orders.reduce((acc, o) => acc + (o.items?.length || 0), 0),
+      json: resultStr,
+    };
+    return { resultStr, entry };
+  };
+
   // ── Generate JSON from form ───────────────────────────────────
   const generateJsonFromForm = () => {
     const now = new Date();
     const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
-    setInputJson(JSON.stringify({
+    const inputObj = {
       documentos: [{
         agrupador:0, cnpjCpfEmpresa: formData.cnpjCpfEmpresa, cnpjCpfTransportadora:'',
         codigoEstabelecimento: formData.codigoEstabelecimento, codigoDepositante: formData.cnpjCpfEmpresa,
@@ -414,7 +453,15 @@ export default function JsonConverter() {
         informacaoAdicional: formData.informacaoAdicional.toUpperCase(),
         detalhes: products.map(p => ({ codigoEmpresa: formData.cnpjCpfEmpresa, codigoProduto: p.codigoProduto, quantidadeMovimento: parseInt(p.quantidadeMovimento)||0, tipoUc: p.tipoUc.toUpperCase(), fatorTipoUc: p.fatorTipoUc, classeProduto: p.classeProduto.toUpperCase(), valorUnitario: parseFloat(p.valorUnitario)||1.0, tipoLogistico: p.tipoLogistico, dadoLogistico: p.dadoLogistico.toUpperCase() }))
       }]
-    }, null, 2));
+    };
+    try {
+      const { resultStr, entry } = performConversion(inputObj);
+      const updated = [entry, ...jsonHistory].slice(0, 100);
+      storage.set('json-history', JSON.stringify(updated));
+      setJsonHistory(updated);
+      setOutputJson(resultStr);
+    } catch {}
+    setInputJson(JSON.stringify(inputObj, null, 2));
     notify('JSON gerado com sucesso!');
     setActiveTab('converter');
     setTimeout(() => window.scrollTo({ top:0, behavior:'smooth' }), 100);
@@ -425,50 +472,8 @@ export default function JsonConverter() {
     try {
       setError('');
       const input = JSON.parse(inputJson);
-      if (!input.documentos?.length) throw new Error('Propriedade "documentos" não encontrada');
-      const isOutbound = formData.documentType === 'outbound';
-      const orders = input.documentos.map(doc => {
-        const now = new Date();
-        const bt = new Date(now.toLocaleString('en-US', { timeZone:'America/Sao_Paulo' }));
-        const currentDate = `${bt.getFullYear()}-${String(bt.getMonth()+1).padStart(2,'0')}-${String(bt.getDate()).padStart(2,'0')}T${String(bt.getHours()).padStart(2,'0')}:${String(bt.getMinutes()).padStart(2,'0')}:${String(bt.getSeconds()).padStart(2,'0')}-03:00`;
-        const uniqueProd = new Set((doc.detalhes||[]).map(i => i.codigoProduto).filter(Boolean));
-        const base = { wareHouseCode: doc.codigoEstabelecimento||0, expectedMovementDate: currentDate, orderNumber: doc.numeroDocumento||'', orderSeries: doc.serieDocumento||'01', orderType: doc.tipoDocumento||'NFE', nfeAccessKey:'00000000000000000000000000000000000000000000', issueDate: currentDate, additionValue:0, discountValue: doc.valorDesconto||0, freightValue: doc.valorFrete||0, insuranceValue: doc.valorSeguro||0, totalOrderValue: doc.valorTotalDocumento||0, totalProductValue: doc.valorTotalProduto||0, grossWeight:0, netWeight:0, volumeQuantity: uniqueProd.size||1 };
-        const common = { nfeAuthorizationDate:null, nfeProtocol:null, transportMode:null, volumeTrackingCode:null, additionalInfo1:null, additionalInfo2:null, additionalInfo3:null, cfop:null, shelfLifeRemainingPercent:null, costCenter:null };
-        const items = (doc.detalhes||[]).map(item => ({ productClass: item.classeProduto||'00', ean: item.codigoProduto||'', batchCode: item.dadoLogistico||null, purchaseUnitFactor: parseInt(item.fatorTipoUc)||1, purchaseUnitType: item.tipoUc||'UN', expirationDate:null, quantity: item.quantidadeMovimento||0, additionValue:0, discountValue:0, serviceValue:0, unitValue: parseFloat(item.valorUnitario)||0, fiscalUnitValue:0 }));
-        if (isOutbound) {
-          const customer = { cnpjCpf: customerData.cnpjCpf||doc.cnpjCpfCliente||'', name: customerData.name||'CLIENTE PADRAO', personType: customerData.personType||'J', neighborhood: customerData.neighborhood||'CENTRO', zipCode: customerData.zipCode||'00000-000', complement: customerData.complement||'N/A', description: customerData.description||doc.descricaoNaturezaOperacao||'', address: customerData.address||'RUA PADRAO', number: customerData.number||'S/N', city: customerData.city||'SAO PAULO', state: customerData.state||'SP' };
-          const carrier = carrierData.cnpjCpf ? { cnpjCpf: carrierData.cnpjCpf, name: carrierData.name||null, description: carrierData.description||null, personType: carrierData.personType||'J', neighborhood: carrierData.neighborhood||null, address: carrierData.address||null, number: carrierData.number||null, city: carrierData.city||null, zipCode: carrierData.zipCode||null, state: carrierData.state||null, complement: carrierData.complement||null } : { cnpjCpf:null, name:null, description:null, personType:null, neighborhood:null, address:null, number:null, city:null, zipCode:null, state:null, complement:null };
-          return { ...base, ...common, salesChannel:'B2B', items, project:{code:null,name:null}, customer, carrier, shippingLabel:{content:null,type:null}, shippingAddress:{cnpjCpf:null,name:null,description:null,personType:null,neighborhood:null,address:null,number:null,city:null,zipCode:null,state:null,complement:null} };
-        } else {
-          const supplier = { neighborhood: supplierData.neighborhood||'CENTRO', zipCode: supplierData.zipCode||'00000-000', cnpjCpf: supplierData.cnpjCpf||doc.cnpjCpfEmpresa||'', complement: supplierData.complement||'N/A', name: supplierData.name||'FORNECEDOR PADRAO', description: doc.descricaoNaturezaOperacao||'', address: supplierData.address||'RUA PADRAO', number: supplierData.number||'S/N', city: supplierData.city||'SAO PAULO', personType: supplierData.personType||'J', state: supplierData.state||'SP' };
-          const carrierIn = carrierData.cnpjCpf ? { neighborhood: carrierData.neighborhood||null, zipCode: carrierData.zipCode||null, cnpjCpf: carrierData.cnpjCpf, complement: carrierData.complement||null, name: carrierData.name||null, description: carrierData.description||null, address: carrierData.address||null, city: carrierData.city||null, number: carrierData.number||null, personType: carrierData.personType||'J', state: carrierData.state||null } : null;
-          return { ...base, ...common, items, supplier, ...(carrierIn && { carrier: carrierIn }) };
-        }
-      });
-      const result = { orders, packingList: null };
-      const resultStr = JSON.stringify(result, null, 2);
+      const { resultStr } = performConversion(input);
       setOutputJson(resultStr);
-
-      // Salva no histórico
-      const firstDoc = input.documentos[0];
-      const entry = {
-        id: Date.now(),
-        timestamp: new Date().toISOString(),
-        orderNumber: firstDoc.numeroDocumento || '—',
-        orderType: firstDoc.tipoDocumento || '—',
-        documentType: formData.documentType,
-        cnpj: formData.documentType === 'outbound'
-          ? (customerData.cnpjCpf || firstDoc.cnpjCpfCliente || '—')
-          : (supplierData.cnpjCpf || firstDoc.cnpjCpfEmpresa || '—'),
-        entityName: formData.documentType === 'outbound'
-          ? (customerData.name || '—')
-          : (supplierData.name || '—'),
-        itemCount: orders.reduce((acc, o) => acc + (o.items?.length || 0), 0),
-        json: resultStr,
-      };
-      const updated = [entry, ...jsonHistory].slice(0, 100);
-      storage.set('json-history', JSON.stringify(updated));
-      setJsonHistory(updated);
     } catch (err) { setError(`Erro: ${err.message}`); setOutputJson(''); }
   };
 
