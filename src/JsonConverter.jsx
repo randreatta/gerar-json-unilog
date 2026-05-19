@@ -373,6 +373,34 @@ export default function JsonConverter() {
     reader.readAsArrayBuffer(file);
   };
 
+  // ── Export / Import carriers JSON ────────────────────────────
+  const exportCarriersJson = () => {
+    if (!Object.keys(savedCarriers).length) { toast.error('Nenhuma transportadora para exportar!'); return; }
+    const blob = new Blob([JSON.stringify(savedCarriers, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement('a'), { href: url, download: 'transportadoras.json' });
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    notify('Transportadoras exportadas!');
+  };
+
+  const importCarriersJson = (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (typeof data !== 'object' || Array.isArray(data)) throw new Error('Formato inválido');
+        const merged = { ...savedCarriers, ...data };
+        storage.set('carriers-data', JSON.stringify(merged));
+        setSavedCarriers(merged);
+        toast.success(`${Object.keys(data).length} transportadora(s) importadas!`);
+      } catch { toast.error('Arquivo JSON inválido.'); }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
   // ── Export / Import depositors JSON ──────────────────────────
   const exportDepositorsJson = () => {
     if (!Object.keys(savedDepositors).length) { toast.error('Nenhum depositante para exportar!'); return; }
@@ -1206,6 +1234,30 @@ export default function JsonConverter() {
           {/* ═══════════ TRANSPORTADORAS ═══════════ */}
           {activeTab === 'carriers' && (
             <div className="max-w-5xl mx-auto space-y-6">
+
+              {/* Exportar / Importar JSON */}
+              {!editingCarrier && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Compartilhar Transportadoras</CardTitle>
+                    <p className="text-sm text-muted-foreground">Exporte para enviar a outra pessoa, ou importe um arquivo recebido</p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex gap-3">
+                      <Button variant="outline" size="sm" onClick={exportCarriersJson} className="gap-2">
+                        <ArrowRight className="w-4 h-4 rotate-90" />Exportar JSON
+                      </Button>
+                      <Button asChild variant="outline" size="sm">
+                        <label className="cursor-pointer flex items-center gap-2">
+                          <Upload className="w-4 h-4" />Importar JSON
+                          <input type="file" accept=".json" onChange={importCarriersJson} className="hidden" />
+                        </label>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">{editingCarrier ? 'Editar Transportadora' : 'Cadastrar Transportadora'}</CardTitle>
