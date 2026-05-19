@@ -203,9 +203,9 @@ const TourGuide = ({ setActiveTab }) => {
     <>
       <button
         onClick={start}
-        className="fixed bottom-6 left-6 z-40 flex items-center gap-2 bg-primary text-primary-foreground text-sm font-medium px-4 py-2.5 rounded-full shadow-lg hover:opacity-90 transition-opacity"
+        className="fixed bottom-6 left-6 z-40 flex items-center justify-center bg-primary text-primary-foreground w-12 h-12 rounded-full shadow-lg hover:opacity-90 transition-opacity"
       >
-        <span className="text-base">🤔</span> Tour guiado
+        <span className="text-2xl">🤔</span>
       </button>
 
       {open && (
