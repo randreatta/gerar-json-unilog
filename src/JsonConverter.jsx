@@ -589,6 +589,44 @@ export default function JsonConverter() {
                 </div>
               </SectionCard>
 
+              {/* Import Excel */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Importar Produtos via Planilha</CardTitle>
+                  <p className="text-sm text-muted-foreground">Opcional — importa os produtos de um arquivo Excel</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-3">
+                    <Button asChild variant="outline" size="sm">
+                      <label className="cursor-pointer gap-2 flex items-center">
+                        <Upload className="w-4 h-4" />Selecionar Excel
+                        <input type="file" accept=".xlsx,.xls,.xlsm" onChange={handleFileUpload} className="hidden" />
+                      </label>
+                    </Button>
+                    <button onMouseEnter={() => setShowExcelHelp(true)} onMouseLeave={() => setShowExcelHelp(false)} className="text-muted-foreground hover:text-foreground transition-colors relative">
+                      <HelpCircle className="w-4 h-4" />
+                      {showExcelHelp && (
+                        <div className="absolute left-6 top-0 z-50 w-72 bg-white border border-border rounded-lg shadow-lg p-4 text-left">
+                          <p className="font-semibold text-sm mb-2">Colunas esperadas (linha 1):</p>
+                          <div className="font-mono text-xs space-y-0.5 text-muted-foreground">
+                            {['codigoProduto','quantidadeMovimento','tipoUc','fatorTipoUc','classeProduto','valorUnitario','tipoLogistico','dadoLogistico'].map((c,i) => (
+                              <p key={c}><span className="text-primary">{String.fromCharCode(65+i)}1:</span> {c}</p>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </button>
+                    {uploadedFileName && (
+                      <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-md px-3 py-1.5">
+                        <Check className="w-3.5 h-3.5" />{uploadedFileName} ({products.length} itens)
+                        <button onClick={() => { setUploadedFileName(''); setProducts([{...emptyProduct}]); }} className="text-gray-400 hover:text-gray-600"><X className="w-3.5 h-3.5" /></button>
+                      </div>
+                    )}
+                  </div>
+                  {uploadError && <p className="text-sm text-destructive mt-2">{uploadError}</p>}
+                </CardContent>
+              </Card>
+
               {/* Depositante */}
               {formData.documentType === 'inbound' && (
                 <Card className="border border-blue-200">
@@ -720,44 +758,6 @@ export default function JsonConverter() {
                   </Card>
                 </>
               )}
-
-              {/* Import Excel */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Importar Produtos via Planilha</CardTitle>
-                  <p className="text-sm text-muted-foreground">Opcional — importa os produtos de um arquivo Excel</p>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-3">
-                    <Button asChild variant="outline" size="sm">
-                      <label className="cursor-pointer gap-2 flex items-center">
-                        <Upload className="w-4 h-4" />Selecionar Excel
-                        <input type="file" accept=".xlsx,.xls,.xlsm" onChange={handleFileUpload} className="hidden" />
-                      </label>
-                    </Button>
-                    <button onMouseEnter={() => setShowExcelHelp(true)} onMouseLeave={() => setShowExcelHelp(false)} className="text-muted-foreground hover:text-foreground transition-colors relative">
-                      <HelpCircle className="w-4 h-4" />
-                      {showExcelHelp && (
-                        <div className="absolute left-6 top-0 z-50 w-72 bg-white border border-border rounded-lg shadow-lg p-4 text-left">
-                          <p className="font-semibold text-sm mb-2">Colunas esperadas (linha 1):</p>
-                          <div className="font-mono text-xs space-y-0.5 text-muted-foreground">
-                            {['codigoProduto','quantidadeMovimento','tipoUc','fatorTipoUc','classeProduto','valorUnitario','tipoLogistico','dadoLogistico'].map((c,i) => (
-                              <p key={c}><span className="text-primary">{String.fromCharCode(65+i)}1:</span> {c}</p>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </button>
-                    {uploadedFileName && (
-                      <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-md px-3 py-1.5">
-                        <Check className="w-3.5 h-3.5" />{uploadedFileName} ({products.length} itens)
-                        <button onClick={() => { setUploadedFileName(''); setProducts([{...emptyProduct}]); }} className="text-gray-400 hover:text-gray-600"><X className="w-3.5 h-3.5" /></button>
-                      </div>
-                    )}
-                  </div>
-                  {uploadError && <p className="text-sm text-destructive mt-2">{uploadError}</p>}
-                </CardContent>
-              </Card>
 
               {/* Products */}
               <Card>
