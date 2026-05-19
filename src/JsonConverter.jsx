@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   ArrowRight, Copy, Check, ChevronDown, ChevronUp,
   Plus, Trash2, FileEdit, Upload, HelpCircle, X,
-  Building2, Truck, Code2, LayoutDashboard, Warehouse, History, Clock
+  Truck, Code2, LayoutDashboard, Warehouse, History, Clock
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Toaster, toast } from 'sonner';
@@ -148,7 +148,6 @@ const navItems = [
   { id: 'converter',  label: 'Payload',           icon: Code2 },
   { id: 'history',    label: 'Histórico',         icon: History },
   { id: 'depositors', label: 'Depositantes',      icon: Warehouse },
-  { id: 'suppliers',  label: 'Fornecedores',      icon: Building2 },
   { id: 'carriers',   label: 'Transportadoras',   icon: Truck },
 ];
 
@@ -172,17 +171,13 @@ export default function JsonConverter() {
   const [expandedHistory, setExpandedHistory] = useState(null);
 
   // ── Saved entities ────────────────────────────────────────────
-  const [savedSuppliers,  setSavedSuppliers]  = useState({});
   const [savedCarriers,   setSavedCarriers]   = useState({});
   const [savedDepositors, setSavedDepositors] = useState({});
-  const [editingSupplier, setEditingSupplier] = useState(null);
   const [editingCarrier,  setEditingCarrier]  = useState(null);
   const [editingDepositor,setEditingDepositor]= useState(null);
 
-  const emptySupplier  = { cnpjCpf:'', name:'', personType:'J', zipCode:'', address:'', number:'', neighborhood:'', complement:'', city:'', state:'' };
   const emptyCarrier   = { cnpjCpf:'', name:'', personType:'J', zipCode:'', address:'', number:'', neighborhood:'', complement:'', city:'', state:'', description:'' };
   const emptyDepositor = { cnpjCpf:'', name:'', personType:'J', zipCode:'', address:'', number:'', neighborhood:'', city:'', state:'' };
-  const [newSupplier,  setNewSupplier]  = useState({ ...emptySupplier });
   const [newCarrier,   setNewCarrier]   = useState({ ...emptyCarrier });
   const [newDepositor, setNewDepositor] = useState({ ...emptyDepositor });
 
@@ -198,16 +193,16 @@ export default function JsonConverter() {
   const [customerData, setCustomerData] = useState({ cnpjCpf:'', name:'', personType:'J', neighborhood:'', zipCode:'', complement:'', description:'', address:'', number:'', city:'', state:'' });
   const [carrierData,  setCarrierData]  = useState({ cnpjCpf:'', name:'', personType:'J', neighborhood:'', address:'', number:'', city:'', zipCode:'', state:'', complement:'', description:'' });
 
-  const [showSupplierFields, setShowSupplierFields] = useState(false);
-  const [showCustomerFields, setShowCustomerFields] = useState(false);
-  const [showCarrierFields,  setShowCarrierFields]  = useState(false);
+  const [showDepositorFields, setShowDepositorFields] = useState(false);
+  const [showProductFields,   setShowProductFields]   = useState(false);
+  const [showCustomerFields,  setShowCustomerFields]  = useState(false);
+  const [showCarrierFields,   setShowCarrierFields]   = useState(false);
 
   const emptyProduct = { codigoProduto:'', quantidadeMovimento:0, tipoUc:'UN', fatorTipoUc:'1', classeProduto:'00', valorUnitario:1.0, tipoLogistico:'1', dadoLogistico:'' };
   const [products, setProducts] = useState([{ ...emptyProduct }]);
 
   // ── Load from storage ─────────────────────────────────────────
   React.useEffect(() => {
-    try { const r = storage.get('suppliers-data');  if (r) setSavedSuppliers(JSON.parse(r.value));  } catch {}
     try { const r = storage.get('carriers-data');   if (r) setSavedCarriers(JSON.parse(r.value));   } catch {}
     try { const r = storage.get('depositors-data'); if (r) setSavedDepositors(JSON.parse(r.value)); } catch {}
     try { const r = storage.get('json-history');    if (r) setJsonHistory(JSON.parse(r.value));     } catch {}
@@ -229,34 +224,6 @@ export default function JsonConverter() {
         set(true); setTimeout(() => set(false), 2000);
       });
   };
-
-  // ── Suppliers ─────────────────────────────────────────────────
-  const saveSupplier = (cnpjCpf, data) => {
-    const updated = { ...savedSuppliers, [cnpjCpf]: { ...data, lastUpdated: new Date().toISOString() } };
-    storage.set('suppliers-data', JSON.stringify(updated)); setSavedSuppliers(updated);
-    notify('Fornecedor salvo!');
-  };
-  const loadSupplierByCnpj = (cnpjCpf) => {
-    if (cnpjCpf && savedSuppliers[cnpjCpf]) {
-      setSupplierData({ ...savedSuppliers[cnpjCpf] }); notify('Dados do fornecedor carregados!'); return true;
-    } return false;
-  };
-  const deleteSupplier = (cnpjCpf) => {
-    if (!window.confirm(`Excluir fornecedor ${cnpjCpf}?`)) return;
-    const updated = { ...savedSuppliers }; delete updated[cnpjCpf];
-    storage.set('suppliers-data', JSON.stringify(updated)); setSavedSuppliers(updated);
-    notify('Fornecedor excluído!');
-  };
-  const saveSupplierFromForm = () => {
-    const s = editingSupplier || newSupplier;
-    if (!s.cnpjCpf || (s.cnpjCpf.length !== 11 && s.cnpjCpf.length !== 14)) { toast.error('CNPJ/CPF deve ter 11 ou 14 dígitos!'); return; }
-    if (!s.name) { toast.error('Nome obrigatório!'); return; }
-    const updated = { ...savedSuppliers, [s.cnpjCpf]: { ...s, lastUpdated: new Date().toISOString() } };
-    storage.set('suppliers-data', JSON.stringify(updated)); setSavedSuppliers(updated);
-    setNewSupplier({ ...emptySupplier }); setEditingSupplier(null);
-    notify(editingSupplier ? 'Fornecedor atualizado!' : 'Fornecedor cadastrado!');
-  };
-  const startEditSupplier = (cnpjCpf) => { setEditingSupplier({ ...savedSuppliers[cnpjCpf] }); setActiveTab('suppliers'); };
 
   // ── Carriers ──────────────────────────────────────────────────
   const saveCarrier = (cnpjCpf, data) => {
@@ -626,28 +593,31 @@ export default function JsonConverter() {
               {formData.documentType === 'inbound' && (
                 <Card className="border border-blue-200">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base text-blue-900">Dados do Depositante</CardTitle>
-                    <p className="text-sm text-blue-600 mt-0.5">Obrigatório para a API 2.0</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-base text-blue-900">Dados do Depositante</CardTitle>
+                        <p className="text-sm text-blue-600 mt-0.5">
+                          {supplierData.cnpjCpf ? supplierData.name || supplierData.cnpjCpf : 'Obrigatório para a API 2.0'}
+                        </p>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => setShowDepositorFields(!showDepositorFields)} className="border-blue-300 text-blue-700 hover:bg-blue-50">
+                        {showDepositorFields ? <><ChevronUp className="w-4 h-4 mr-1.5"/>Ocultar</> : <><ChevronDown className="w-4 h-4 mr-1.5"/>Selecionar</>}
+                      </Button>
+                    </div>
                   </CardHeader>
-                  <CardContent>
-                    {Object.keys(savedDepositors).length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Nenhum depositante cadastrado. Acesse a aba <strong>Depositantes</strong> para cadastrar.</p>
-                    ) : (
-                      <>
-                        {supplierData.cnpjCpf && (
-                          <div className="mb-3 px-3 py-2 rounded-md bg-blue-50 border border-blue-200 text-sm flex justify-between items-center">
-                            <span className="font-medium text-blue-900">{supplierData.name || supplierData.cnpjCpf}</span>
-                            <span className="text-xs text-blue-600 font-mono">{supplierData.cnpjCpf}</span>
-                          </div>
-                        )}
+                  {showDepositorFields && (
+                    <CardContent>
+                      {Object.keys(savedDepositors).length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Nenhum depositante cadastrado. Acesse a aba <strong>Depositantes</strong> para cadastrar.</p>
+                      ) : (
                         <DepositorSelector saved={savedDepositors}
                           onSelect={cnpj => {
                             const d = savedDepositors[cnpj];
-                            if (d) setSupplierData({ ...d });
+                            if (d) { setSupplierData({ ...d }); setShowDepositorFields(false); }
                           }} />
-                      </>
-                    )}
-                  </CardContent>
+                      )}
+                    </CardContent>
+                  )}
                 </Card>
               )}
 
@@ -671,14 +641,13 @@ export default function JsonConverter() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <FormField label="CNPJ/CPF Cliente *" className="md:col-span-2">
                             <Input value={customerData.cnpjCpf||''} onChange={e => { const v=e.target.value.replace(/\D/g,''); if(v.length<=14) setCustomerData({...customerData,cnpjCpf:v}); }}
-                              onBlur={e => { const v=e.target.value; if((v.length===11||v.length===14)&&savedSuppliers[v]) { const s=savedSuppliers[v]; setCustomerData({cnpjCpf:s.cnpjCpf,name:s.name,personType:s.personType,neighborhood:s.neighborhood,zipCode:s.zipCode,complement:s.complement,description:'',address:s.address,number:s.number,city:s.city,state:s.state}); notify('Dados do cliente carregados!'); } }}
-                              placeholder="Digite para carregar automaticamente" />
+                              placeholder="00000000000000" />
                           </FormField>
-                          {Object.keys(savedSuppliers).length > 0 && (
+                          {Object.keys(savedDepositors).length > 0 && (
                             <div className="md:col-span-2">
-                              <Label className="text-xs text-muted-foreground mb-2 block">Clientes salvos:</Label>
-                              <SavedSelector saved={savedSuppliers} colorClass="border-green-200 text-green-700 hover:border-green-400"
-                                onSelect={cnpj => { const s=savedSuppliers[cnpj]; setCustomerData({cnpjCpf:s.cnpjCpf,name:s.name,personType:s.personType,neighborhood:s.neighborhood,zipCode:s.zipCode,complement:s.complement,description:'',address:s.address,number:s.number,city:s.city,state:s.state}); notify('Dados do cliente carregados!'); }} />
+                              <Label className="text-xs text-muted-foreground mb-2 block">Depositantes cadastrados:</Label>
+                              <SavedSelector saved={savedDepositors} colorClass="border-green-200 text-green-700 hover:border-green-400"
+                                onSelect={cnpj => { const d=savedDepositors[cnpj]; setCustomerData({cnpjCpf:d.cnpjCpf,name:d.name,personType:d.personType,neighborhood:d.neighborhood,zipCode:d.zipCode,complement:d.complement||'',description:'',address:d.address,number:d.number,city:d.city,state:d.state}); notify('Dados do cliente carregados!'); }} />
                             </div>
                           )}
                           <FormField label="Nome *" className="md:col-span-2">
@@ -718,7 +687,7 @@ export default function JsonConverter() {
                           <FormField label="CNPJ/CPF Transportadora" className="md:col-span-2">
                             <div className="flex gap-2">
                               <Input value={carrierData.cnpjCpf||''} onChange={e => { const v=e.target.value.replace(/\D/g,''); if(v.length<=14) setCarrierData({...carrierData,cnpjCpf:v}); }}
-                                onBlur={e => { const v=e.target.value; if(v.length===11||v.length===14) { if(!loadCarrierByCnpj(v)&&savedSuppliers[v]) { const s=savedSuppliers[v]; setCarrierData({cnpjCpf:s.cnpjCpf,name:s.name,personType:s.personType,neighborhood:s.neighborhood,address:s.address,number:s.number,city:s.city,zipCode:s.zipCode,state:s.state,complement:s.complement,description:''}); notify('Dados carregados!'); } } }}
+                                onBlur={e => { const v=e.target.value; if(v.length===11||v.length===14) loadCarrierByCnpj(v); }}
                                 placeholder="Digite para carregar automaticamente" className="flex-1" />
                               {(carrierData.cnpjCpf?.length===11||carrierData.cnpjCpf?.length===14) && (
                                 <Button size="sm" variant="outline" onClick={() => saveCarrier(carrierData.cnpjCpf, carrierData)} className="shrink-0">Salvar</Button>
@@ -795,15 +764,22 @@ export default function JsonConverter() {
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-base">Produtos</CardTitle>
+                      <CardTitle className="text-base">Cadastrar Produto Manualmente</CardTitle>
                       <p className="text-sm text-muted-foreground">{products.length} produto{products.length!==1?'s':''} adicionado{products.length!==1?'s':''}</p>
                     </div>
-                    <Button size="sm" onClick={addProduct} className="gap-1.5">
-                      <Plus className="w-4 h-4" />Adicionar
-                    </Button>
+                    <div className="flex gap-2">
+                      {showProductFields && (
+                        <Button size="sm" variant="outline" onClick={addProduct} className="gap-1.5">
+                          <Plus className="w-4 h-4" />Adicionar
+                        </Button>
+                      )}
+                      <Button size="sm" variant="outline" onClick={() => setShowProductFields(!showProductFields)} className="gap-1.5">
+                        {showProductFields ? <><ChevronUp className="w-4 h-4"/>Ocultar</> : <><ChevronDown className="w-4 h-4"/>Abrir</>}
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                {showProductFields && <CardContent className="space-y-4">
                   {products.map((product, index) => (
                     <div key={index} className="rounded-lg border border-border p-4 bg-gray-50/50">
                       <div className="flex justify-between items-center mb-3">
@@ -857,12 +833,13 @@ export default function JsonConverter() {
                       </div>
                     </div>
                   ))}
-                  <Button onClick={generateJsonFromForm} className="w-full mt-2 gap-2" size="lg">
-                    Gerar JSON
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
-                </CardContent>
+                </CardContent>}
               </Card>
+
+              <Button onClick={generateJsonFromForm} className="w-full gap-2" size="lg">
+                Gerar JSON
+                <ArrowRight className="w-4 h-4" />
+              </Button>
             </div>
           )}
 
@@ -935,114 +912,6 @@ export default function JsonConverter() {
                       className="w-full h-96 p-3 rounded-md border border-input bg-muted font-mono text-xs resize-none focus-visible:outline-none" />
                   </CardContent>
                 </Card>
-              </div>
-            </div>
-          )}
-
-          {/* ═══════════ FORNECEDORES ═══════════ */}
-          {activeTab === 'suppliers' && (
-            <div className="max-w-5xl mx-auto space-y-6">
-              {/* Bulk import */}
-              {!editingSupplier && (
-                <Card className="border border-violet-200">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="text-base text-violet-900">Importação em Massa</CardTitle>
-                        <p className="text-sm text-violet-600 mt-0.5">Importe vários fornecedores de uma planilha</p>
-                      </div>
-                      <Button asChild variant="outline" size="sm" className="border-violet-300 text-violet-700 hover:bg-violet-50">
-                        <label className="cursor-pointer gap-2 flex items-center">
-                          <Upload className="w-4 h-4" />Selecionar Arquivo
-                          <input type="file" accept=".xlsx,.xls,.csv" onChange={handleSuppliersFileUpload} className="hidden" />
-                        </label>
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="bg-violet-50 rounded-md p-3 text-xs text-violet-700 space-y-1">
-                      <p><strong>Colunas obrigatórias:</strong> Empresas / CNPJ (CNPJ ou CPF) · Empresa / Nome</p>
-                      <p><strong>Opcionais:</strong> Endereço · Número · Bairro · CEP · Município · UF · Tipo Pessoa</p>
-                      <p><strong>Formatos:</strong> .CSV · .XLS · .XLSX</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Form */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">{editingSupplier ? 'Editar Fornecedor' : 'Cadastrar Fornecedor'}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField label="CNPJ/CPF *" className="md:col-span-2">
-                      <Input value={editingSupplier ? editingSupplier.cnpjCpf : newSupplier.cnpjCpf}
-                        onChange={e => { const v=e.target.value.replace(/\D/g,''); if(v.length<=14) { editingSupplier ? setEditingSupplier({...editingSupplier,cnpjCpf:v}) : setNewSupplier({...newSupplier,cnpjCpf:v}); } }}
-                        disabled={!!editingSupplier} placeholder="00000000000000" />
-                      <p className="text-xs text-muted-foreground mt-1">11 dígitos (CPF) ou 14 dígitos (CNPJ)</p>
-                    </FormField>
-                    <FormField label="Nome *" className="md:col-span-2">
-                      <Input value={editingSupplier ? editingSupplier.name : newSupplier.name}
-                        onChange={e => editingSupplier ? setEditingSupplier({...editingSupplier,name:e.target.value}) : setNewSupplier({...newSupplier,name:e.target.value})}
-                        placeholder="Nome do fornecedor" />
-                    </FormField>
-                    <FormField label="Tipo Pessoa">
-                      <Select value={editingSupplier ? editingSupplier.personType : newSupplier.personType}
-                        onValueChange={v => editingSupplier ? setEditingSupplier({...editingSupplier,personType:v}) : setNewSupplier({...newSupplier,personType:v})}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent><SelectItem value="J">Jurídica</SelectItem><SelectItem value="F">Física</SelectItem></SelectContent>
-                      </Select>
-                    </FormField>
-                    {/* Address */}
-                    {(['zipCode','address','number','neighborhood','complement','city','state']).map(field => {
-                      const labels = { zipCode:'CEP', address:'Endereço', number:'Número', neighborhood:'Bairro', complement:'Complemento', city:'Cidade', state:'Estado' };
-                      const placeholders = { zipCode:'00000-000', address:'Rua Exemplo', number:'S/N', neighborhood:'Centro', complement:'N/A', city:'São Paulo', state:'SP' };
-                      const val = editingSupplier ? (editingSupplier[field]||'') : (newSupplier[field]||'');
-                      const onChange = e => {
-                        let v = e.target.value;
-                        if (field === 'state') { v = v.toUpperCase(); if (v.length > 2) return; }
-                        editingSupplier ? setEditingSupplier({...editingSupplier,[field]:v}) : setNewSupplier({...newSupplier,[field]:v});
-                      };
-                      return (
-                        <FormField key={field} label={labels[field]} className={field==='address' ? 'md:col-span-2' : ''}>
-                          <Input value={val} onChange={onChange} placeholder={placeholders[field]} maxLength={field==='state'?2:undefined} />
-                        </FormField>
-                      );
-                    })}
-                  </div>
-                  <div className="flex gap-3 mt-6">
-                    <Button onClick={saveSupplierFromForm} className="gap-1.5">
-                      <Check className="w-4 h-4" />{editingSupplier ? 'Atualizar' : 'Cadastrar'}
-                    </Button>
-                    {editingSupplier && (
-                      <Button variant="outline" onClick={() => { setEditingSupplier(null); setNewSupplier({...emptySupplier}); }} className="gap-1.5">
-                        <X className="w-4 h-4" />Cancelar
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* List */}
-              <div>
-                <h3 className="text-sm font-semibold text-muted-foreground mb-4 uppercase tracking-wide">
-                  Fornecedores Cadastrados ({Object.keys(savedSuppliers).length})
-                </h3>
-                {!Object.keys(savedSuppliers).length ? (
-                  <div className="text-center py-16 bg-white rounded-lg border-2 border-dashed border-border">
-                    <Building2 className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
-                    <p className="text-muted-foreground">Nenhum fornecedor cadastrado ainda</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {Object.entries(savedSuppliers).map(([cnpj, s]) => (
-                      <EntityCard key={cnpj} entity={s} type="supplier"
-                        onEdit={() => startEditSupplier(cnpj)}
-                        onDelete={() => deleteSupplier(cnpj)} />
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
           )}
