@@ -373,6 +373,34 @@ export default function JsonConverter() {
     reader.readAsArrayBuffer(file);
   };
 
+  // ── Export / Import depositors JSON ──────────────────────────
+  const exportDepositorsJson = () => {
+    if (!Object.keys(savedDepositors).length) { toast.error('Nenhum depositante para exportar!'); return; }
+    const blob = new Blob([JSON.stringify(savedDepositors, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement('a'), { href: url, download: 'depositantes.json' });
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    notify('Depositantes exportados!');
+  };
+
+  const importDepositorsJson = (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (typeof data !== 'object' || Array.isArray(data)) throw new Error('Formato inválido');
+        const merged = { ...savedDepositors, ...data };
+        storage.set('depositors-data', JSON.stringify(merged));
+        setSavedDepositors(merged);
+        toast.success(`${Object.keys(data).length} depositante(s) importados!`);
+      } catch { toast.error('Arquivo JSON inválido.'); }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
   // ── Products ──────────────────────────────────────────────────
   const addProduct    = () => setProducts([...products, { ...emptyProduct }]);
   const removeProduct = (i) => setProducts(products.filter((_,idx) => idx !== i));
@@ -1042,6 +1070,29 @@ export default function JsonConverter() {
                         <p><span className="font-mono bg-white px-1.5 py-0.5 rounded border text-xs">Tipo Pessoa Empresa</span> → Tipo (J/F)</p>
                       </div>
                       <p className="mt-2 text-muted-foreground">Formatos aceitos: .XLS · .XLSX · .CSV</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Exportar / Importar JSON */}
+              {!editingDepositor && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Compartilhar Depositantes</CardTitle>
+                    <p className="text-sm text-muted-foreground">Exporte para enviar a outra pessoa, ou importe um arquivo recebido</p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex gap-3">
+                      <Button variant="outline" size="sm" onClick={exportDepositorsJson} className="gap-2">
+                        <ArrowRight className="w-4 h-4 rotate-90" />Exportar JSON
+                      </Button>
+                      <Button asChild variant="outline" size="sm">
+                        <label className="cursor-pointer flex items-center gap-2">
+                          <Upload className="w-4 h-4" />Importar JSON
+                          <input type="file" accept=".json" onChange={importDepositorsJson} className="hidden" />
+                        </label>
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
