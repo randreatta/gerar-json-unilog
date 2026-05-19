@@ -203,7 +203,7 @@ const TourGuide = ({ setActiveTab }) => {
     <>
       <button
         onClick={start}
-        className="fixed bottom-6 left-6 z-40 text-4xl hover:scale-110 transition-transform drop-shadow-md"
+        className="text-3xl hover:scale-110 transition-transform"
       >
         🤔
       </button>
@@ -660,7 +660,6 @@ export default function JsonConverter() {
   return (
     <div className="flex h-screen bg-background overflow-hidden">
       <Toaster position="top-right" richColors />
-      <TourGuide setActiveTab={setActiveTab} />
 
       {/* ── Sidebar ── */}
       <aside className="w-64 shrink-0 bg-white border-r border-border flex flex-col shadow-sm">
@@ -685,8 +684,9 @@ export default function JsonConverter() {
             );
           })}
         </nav>
-        <div className="p-4 border-t border-border">
-          <p className="text-xs text-muted-foreground text-center">v1.0.0</p>
+        <div className="p-4 border-t border-border flex flex-col items-center gap-2">
+          <TourGuide setActiveTab={setActiveTab} />
+          <p className="text-xs text-muted-foreground">v1.0.0</p>
         </div>
       </aside>
 
