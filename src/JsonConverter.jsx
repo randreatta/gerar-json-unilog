@@ -143,6 +143,125 @@ const DepositorSelector = ({ saved, onSelect }) => {
   );
 };
 
+const tourSteps = [
+  {
+    tab: null,
+    title: 'Bem-vindo ao Criação JSON!',
+    description: 'Ferramenta da Unilog Express para gerar e converter JSONs de documentos para o WMS. Vamos apresentar as principais funcionalidades em alguns passos.',
+    icon: '👋',
+  },
+  {
+    tab: 'depositors',
+    title: 'Depositantes',
+    description: 'Cadastre aqui os depositantes (clientes). Você pode importar em massa via planilha Excel ou usar exportar/importar JSON para compartilhar o cadastro com outras pessoas.',
+    icon: '🏭',
+  },
+  {
+    tab: 'carriers',
+    title: 'Transportadoras',
+    description: 'Gerencie as transportadoras utilizadas nos documentos de saída. Também suporta exportação e importação em JSON para fácil compartilhamento.',
+    icon: '🚛',
+  },
+  {
+    tab: 'creator',
+    title: 'Gerar JSON',
+    description: 'Preencha os dados do documento (tipo, número, série, valores) e adicione os produtos. Importe produtos via planilha Excel para agilizar. Clique em "Gerar JSON" ao finalizar.',
+    icon: '📋',
+  },
+  {
+    tab: 'converter',
+    title: 'Payload',
+    description: 'Após gerar, o payload aparece aqui. Clique em "Converter JSON" para transformar no formato final da API. Copie o resultado e envie ao WMS.',
+    icon: '📄',
+  },
+  {
+    tab: 'history',
+    title: 'Histórico',
+    description: 'Todos os JSONs gerados ficam salvos automaticamente nesta aba. Você pode expandir, copiar ou excluir registros anteriores a qualquer momento.',
+    icon: '🕐',
+  },
+];
+
+const TourGuide = ({ setActiveTab }) => {
+  const [open, setOpen] = React.useState(false);
+  const [step, setStep] = React.useState(0);
+
+  const start = () => { setStep(0); setOpen(true); };
+  const close = () => setOpen(false);
+
+  const goTo = (idx) => {
+    setStep(idx);
+    if (tourSteps[idx].tab) setActiveTab(tourSteps[idx].tab);
+  };
+
+  const next = () => { if (step < tourSteps.length - 1) goTo(step + 1); else close(); };
+  const prev = () => { if (step > 0) goTo(step - 1); };
+
+  const current = tourSteps[step];
+
+  return (
+    <>
+      <button
+        onClick={start}
+        className="fixed bottom-6 left-6 z-40 flex items-center gap-2 bg-primary text-primary-foreground text-sm font-medium px-4 py-2.5 rounded-full shadow-lg hover:opacity-90 transition-opacity"
+      >
+        <span className="text-base">?</span> Tour guiado
+      </button>
+
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-end justify-start p-6 pointer-events-none">
+          <div className="pointer-events-auto w-full max-w-sm bg-white rounded-2xl shadow-2xl border border-border overflow-hidden">
+            {/* Header */}
+            <div className="bg-primary px-5 py-4 flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{current.icon}</span>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-primary-foreground/70 mb-0.5">
+                    Passo {step + 1} de {tourSteps.length}
+                  </p>
+                  <h3 className="text-base font-bold text-primary-foreground leading-tight">{current.title}</h3>
+                </div>
+              </div>
+              <button onClick={close} className="text-primary-foreground/70 hover:text-primary-foreground mt-0.5 shrink-0">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Progress bar */}
+            <div className="h-1 bg-gray-100">
+              <div
+                className="h-1 bg-primary transition-all duration-300"
+                style={{ width: `${((step + 1) / tourSteps.length) * 100}%` }}
+              />
+            </div>
+
+            {/* Body */}
+            <div className="px-5 py-4">
+              <p className="text-sm text-gray-700 leading-relaxed">{current.description}</p>
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 pb-4 flex items-center justify-between gap-3">
+              <button onClick={close} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                Pular tour
+              </button>
+              <div className="flex gap-2">
+                {step > 0 && (
+                  <Button size="sm" variant="outline" onClick={prev}>Anterior</Button>
+                )}
+                <Button size="sm" onClick={next}>
+                  {step < tourSteps.length - 1 ? 'Próximo' : 'Concluir'}
+                  {step < tourSteps.length - 1 && <ArrowRight className="w-3.5 h-3.5 ml-1.5" />}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
 const navItems = [
   { id: 'creator',    label: 'Gerar JSON',       icon: LayoutDashboard },
   { id: 'converter',  label: 'Payload',           icon: Code2 },
@@ -541,6 +660,7 @@ export default function JsonConverter() {
   return (
     <div className="flex h-screen bg-background overflow-hidden">
       <Toaster position="top-right" richColors />
+      <TourGuide setActiveTab={setActiveTab} />
 
       {/* ── Sidebar ── */}
       <aside className="w-64 shrink-0 bg-white border-r border-border flex flex-col shadow-sm">
