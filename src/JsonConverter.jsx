@@ -185,6 +185,43 @@ const tourSteps = [
 const TourGuide = ({ setActiveTab }) => {
   const [open, setOpen] = React.useState(false);
   const [step, setStep] = React.useState(0);
+  const [pos, setPos] = React.useState({ x: 24, y: typeof window !== 'undefined' ? window.innerHeight - 80 : 600 });
+  const [dragging, setDragging] = React.useState(false);
+  const dragOffset = React.useRef({ x: 0, y: 0 });
+  const hasDragged = React.useRef(false);
+
+  React.useEffect(() => {
+    if (!dragging) return;
+    const onMove = (e) => {
+      hasDragged.current = true;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      setPos({
+        x: Math.max(0, Math.min(window.innerWidth - 48, clientX - dragOffset.current.x)),
+        y: Math.max(0, Math.min(window.innerHeight - 48, clientY - dragOffset.current.y)),
+      });
+    };
+    const onUp = () => setDragging(false);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('touchend', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onUp);
+    };
+  }, [dragging]);
+
+  const onPointerDown = (e) => {
+    e.preventDefault();
+    hasDragged.current = false;
+    setDragging(true);
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    dragOffset.current = { x: clientX - pos.x, y: clientY - pos.y };
+  };
 
   const start = () => { setStep(0); setOpen(true); };
   const close = () => setOpen(false);
@@ -202,8 +239,14 @@ const TourGuide = ({ setActiveTab }) => {
   return (
     <>
       <button
-        onClick={start}
-        className="text-3xl hover:scale-110 transition-transform"
+        onMouseDown={onPointerDown}
+        onTouchStart={onPointerDown}
+        onClick={() => { if (!hasDragged.current) start(); }}
+        style={{ left: pos.x, top: pos.y }}
+        className={cn(
+          'fixed z-40 text-4xl select-none',
+          dragging ? 'cursor-grabbing scale-110' : 'cursor-grab hover:scale-110 transition-transform'
+        )}
       >
         🤔
       </button>
@@ -660,6 +703,7 @@ export default function JsonConverter() {
   return (
     <div className="flex h-screen bg-background overflow-hidden">
       <Toaster position="top-right" richColors />
+      <TourGuide setActiveTab={setActiveTab} />
 
       {/* ── Sidebar ── */}
       <aside className="w-64 shrink-0 bg-white border-r border-border flex flex-col shadow-sm">
@@ -684,9 +728,8 @@ export default function JsonConverter() {
             );
           })}
         </nav>
-        <div className="p-4 border-t border-border flex flex-col items-center gap-2">
-          <TourGuide setActiveTab={setActiveTab} />
-          <p className="text-xs text-muted-foreground">v1.0.0</p>
+        <div className="p-4 border-t border-border">
+          <p className="text-xs text-muted-foreground text-center">v1.0.0</p>
         </div>
       </aside>
 
