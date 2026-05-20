@@ -359,6 +359,8 @@ export default function JsonConverter() {
   const [showProductFields,   setShowProductFields]   = useState(false);
   const [showCustomerFields,  setShowCustomerFields]  = useState(false);
   const [showCarrierFields,   setShowCarrierFields]   = useState(false);
+  const [showDepositorForm,   setShowDepositorForm]   = useState(false);
+  const [showCarrierForm,     setShowCarrierForm]     = useState(false);
 
   const emptyProduct = { codigoProduto:'', quantidadeMovimento:0, tipoUc:'UN', fatorTipoUc:'1', classeProduto:'00', valorUnitario:1.0, tipoLogistico:'1', dadoLogistico:'' };
   const [products, setProducts] = useState([{ ...emptyProduct }]);
@@ -1292,10 +1294,19 @@ export default function JsonConverter() {
               {/* Cadastro individual */}
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base">{editingDepositor ? 'Editar Depositante' : 'Cadastrar Depositante'}</CardTitle>
-                  <p className="text-sm text-muted-foreground">Cadastro individual</p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base">{editingDepositor ? 'Editar Depositante' : 'Cadastrar Depositante'}</CardTitle>
+                      <p className="text-sm text-muted-foreground">Cadastro individual</p>
+                    </div>
+                    {!editingDepositor && (
+                      <Button size="sm" variant="outline" onClick={() => setShowDepositorForm(!showDepositorForm)} className="gap-1.5">
+                        {showDepositorForm ? <><ChevronUp className="w-4 h-4"/>Ocultar</> : <><ChevronDown className="w-4 h-4"/>Abrir</>}
+                      </Button>
+                    )}
+                  </div>
                 </CardHeader>
-                <CardContent>
+                {(showDepositorForm || editingDepositor) && <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField label="CNPJ/CPF *" className="md:col-span-2">
                       <Input
@@ -1345,7 +1356,7 @@ export default function JsonConverter() {
                       </Button>
                     )}
                   </div>
-                </CardContent>
+                </CardContent>}
               </Card>
 
               {/* Lista */}
@@ -1423,10 +1434,19 @@ export default function JsonConverter() {
 
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base">{editingCarrier ? 'Editar Transportadora' : 'Cadastrar Transportadora'}</CardTitle>
-                  <p className="text-sm text-muted-foreground">Para uso em documentos de saída (Outbound)</p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base">{editingCarrier ? 'Editar Transportadora' : 'Cadastrar Transportadora'}</CardTitle>
+                      <p className="text-sm text-muted-foreground">Para uso em documentos de saída (Outbound)</p>
+                    </div>
+                    {!editingCarrier && (
+                      <Button size="sm" variant="outline" onClick={() => setShowCarrierForm(!showCarrierForm)} className="gap-1.5">
+                        {showCarrierForm ? <><ChevronUp className="w-4 h-4"/>Ocultar</> : <><ChevronDown className="w-4 h-4"/>Abrir</>}
+                      </Button>
+                    )}
+                  </div>
                 </CardHeader>
-                <CardContent>
+                {(showCarrierForm || editingCarrier) && <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField label="CNPJ/CPF *" className="md:col-span-2">
                       <Input value={editingCarrier ? editingCarrier.cnpjCpf : newCarrier.cnpjCpf}
@@ -1471,7 +1491,7 @@ export default function JsonConverter() {
                       </Button>
                     )}
                   </div>
-                </CardContent>
+                </CardContent>}
               </Card>
 
               <div>
