@@ -787,6 +787,7 @@ export default function JsonConverter() {
                         <SelectItem value="CINV">CINV</SelectItem>
                         <SelectItem value="NFE">NFE</SelectItem>
                         <SelectItem value="NFS">NFS</SelectItem>
+                        <SelectItem value="PED">PED</SelectItem>
                       </SelectContent>
                     </Select>
                   </FormField>
